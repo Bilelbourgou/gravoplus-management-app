@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,9 +47,12 @@ export function LoginScreen() {
       >
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Ionicons name="diamond" size={48} color={colors.primary[500]} />
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
-          <Text style={styles.title}>GravoPlus</Text>
           <Text style={styles.subtitle}>Gestion de gravure professionnelle</Text>
         </View>
 
@@ -119,13 +123,15 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: colors.background.elevated,
+    width: 100,
+    height: 100,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  logo: {
+    width: 100,
+    height: 100,
   },
   title: {
     fontSize: 32,

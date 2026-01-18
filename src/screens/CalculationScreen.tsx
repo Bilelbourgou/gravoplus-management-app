@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { devisApi, materialsApi } from '../services';
 import { colors, machineColors } from '../theme/colors';
-import type { Material, MachineType } from '../types';
+import type { Material, MachineType, DevisLine } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
 
 type Props = {
@@ -20,13 +21,35 @@ export function CalculationScreen({ navigation, route }: Props) {
   const [description, setDescription] = useState('');
   const [materialId, setMaterialId] = useState<string | undefined>();
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [lines, setLines] = useState<DevisLine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingLines, setLoadingLines] = useState(true);
 
   useEffect(() => {
-    if (machineType === 'LASER') {
-      materialsApi.getAll().then(setMaterials).catch(console.error);
-    }
-  }, [machineType]);
+    const loadData = async () => {
+      try {
+        if (machineType === 'LASER') {
+          const mats = await materialsApi.getAll();
+          setMaterials(mats);
+        }
+        const devis = await devisApi.getById(devisId);
+        setLines(devis.lines || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoadingLines(false);
+      }
+    };
+    loadData();
+  }, [machineType, devisId]);
+
+  const resetForm = () => {
+    setMinutes('');
+    setMeters('');
+    setQuantity('');
+    setDescription('');
+    setMaterialId(undefined);
+  };
 
   const handleAddLine = async () => {
     setLoading(true);
@@ -39,15 +62,58 @@ export function CalculationScreen({ navigation, route }: Props) {
         quantity: quantity ? parseInt(quantity) : undefined,
         materialId,
       });
-      navigation.navigate('Services', { devisId });
+      const updatedDevis = await devisApi.getById(devisId);
+      setLines(updatedDevis.lines || []);
+      resetForm();
     } catch (error) {
       console.error(error);
+      Alert.alert('Erreur', 'Impossible d\'ajouter la ligne');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRemoveLine = async (lineId: string) => {
+    Alert.alert(
+      'Confirmer',
+      'Voulez-vous supprimer cette ligne ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await devisApi.removeLine(devisId, lineId);
+              setLines(lines.filter(l => l.id !== lineId));
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Erreur', 'Impossible de supprimer la ligne');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleContinue = () => {
+    if (lines.length === 0) {
+      Alert.alert('Attention', 'Veuillez ajouter au moins une ligne avant de continuer');
+      return;
+    }
+    navigation.navigate('Services', { devisId });
+  };
+
   const color = machineColors[machineType as MachineType];
+
+  if (loadingLines) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={[styles.label, { marginTop: 12 }]}>Chargement...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -55,6 +121,34 @@ export function CalculationScreen({ navigation, route }: Props) {
         <Text style={[styles.machineType, { color }]}>{machineType}</Text>
         <Text style={styles.headerSubtitle}>Entrez les données de calcul</Text>
       </View>
+
+      {/* Added Lines List */}
+      {lines.length > 0 && (
+        <View style={styles.linesContainer}>
+          <Text style={styles.linesTitle}>Lignes ajoutées ({lines.length})</Text>
+          {lines.map((line) => (
+            <View key={line.id} style={styles.lineItem}>
+              <View style={styles.lineInfo}>
+                <Text style={styles.lineDescription}>
+                  {line.description || 'Sans description'}
+                </Text>
+                <View style={styles.lineDetails}>
+                  {line.minutes && <Text style={styles.lineDetailText}>{line.minutes} min</Text>}
+                  {line.meters && <Text style={styles.lineDetailText}>{line.meters} m</Text>}
+                  {line.quantity && <Text style={styles.lineDetailText}>{line.quantity} unités</Text>}
+                </View>
+                <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => handleRemoveLine(line.id)}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
@@ -130,17 +224,32 @@ export function CalculationScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-        onPress={handleAddLine}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitButtonText}>Ajouter et continuer</Text>
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={[styles.addButton, loading && styles.submitButtonDisabled]}
+          onPress={handleAddLine}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.submitButtonText}>Ajouter une ligne</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        
+        {lines.length > 0 && (
+          <TouchableOpacity
+            style={[styles.continueButton]}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueButtonText}>Continuer</Text>
+            <Ionicons name="arrow-forward" size={20} color={colors.primary[500]} />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -176,13 +285,77 @@ const styles = StyleSheet.create({
   materialChipSelected: { backgroundColor: colors.primary[500], borderColor: colors.primary[500] },
   materialChipText: { color: colors.text.secondary, fontSize: 14 },
   materialChipTextSelected: { color: '#fff' },
-  submitButton: {
+  linesContainer: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: colors.background.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  linesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+  lineItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: colors.background.elevated,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  lineInfo: { flex: 1, marginRight: 12 },
+  lineDescription: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 4,
+  },
+  lineDetails: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 4,
+  },
+  lineDetailText: {
+    fontSize: 12,
+    color: colors.text.muted,
+  },
+  lineTotal: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  removeButton: {
+    padding: 8,
+  },
+  actionsContainer: {
+    gap: 12,
+    marginTop: 32,
+  },
+  addButton: {
     backgroundColor: colors.primary[500],
     padding: 16,
     borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  continueButton: {
+    backgroundColor: colors.background.surface,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.primary[500],
   },
   submitButtonDisabled: { opacity: 0.7 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  continueButtonText: { color: colors.primary[500], fontSize: 16, fontWeight: '600' },
 });

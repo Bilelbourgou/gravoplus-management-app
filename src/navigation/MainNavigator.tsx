@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useAuthStore } from '../store/auth.store';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { ClientSelectScreen } from '../screens/ClientSelectScreen';
@@ -12,11 +13,25 @@ import { ServicesScreen } from '../screens/ServicesScreen';
 import { DevisSummaryScreen } from '../screens/DevisSummaryScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { DevisDetailScreen } from '../screens/DevisDetailScreen';
+import {
+  AdminDashboardScreen,
+  AdminClientsScreen,
+  AdminEmployeesScreen,
+  AdminSettingsScreen,
+} from '../screens/admin';
 
 export type MainTabParamList = {
   HomeTab: undefined;
   NewDevisTab: undefined;
   HistoryTab: undefined;
+  AdminTab: undefined;
+};
+
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  AdminClients: undefined;
+  AdminEmployees: undefined;
+  AdminSettings: undefined;
 };
 
 export type NewDevisStackParamList = {
@@ -35,6 +50,7 @@ export type HistoryStackParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const NewDevisStack = createNativeStackNavigator<NewDevisStackParamList>();
 const HistoryStack = createNativeStackNavigator<HistoryStackParamList>();
+const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 
 function NewDevisNavigator() {
   return (
@@ -97,7 +113,43 @@ function HistoryNavigator() {
   );
 }
 
+function AdminNavigator() {
+  return (
+    <AdminStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background.surface },
+        headerTintColor: colors.text.primary,
+        headerTitleStyle: { fontWeight: '600' },
+      }}
+    >
+      <AdminStack.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminClients"
+        component={AdminClientsScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminEmployees"
+        component={AdminEmployeesScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminSettings"
+        component={AdminSettingsScreen}
+        options={{ headerShown: false }}
+      />
+    </AdminStack.Navigator>
+  );
+}
+
 export function MainNavigator() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -124,6 +176,8 @@ export function MainNavigator() {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'HistoryTab') {
             iconName = focused ? 'time' : 'time-outline';
+          } else if (route.name === 'AdminTab') {
+            iconName = focused ? 'settings' : 'settings-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -145,6 +199,13 @@ export function MainNavigator() {
         component={HistoryNavigator}
         options={{ tabBarLabel: 'Historique' }}
       />
+      {isAdmin && (
+        <Tab.Screen
+          name="AdminTab"
+          component={AdminNavigator}
+          options={{ tabBarLabel: 'Admin' }}
+        />
+      )}
     </Tab.Navigator>
   );
 }

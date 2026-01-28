@@ -133,3 +133,88 @@ export interface AddDevisLineInput {
   quantity?: number;
   materialId?: string;
 }
+
+// Admin types
+export interface DashboardStats {
+  totalClients: number;
+  totalEmployees: number;
+  totalDevis: number;
+  totalInvoices: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  devisByStatus: {
+    draft: number;
+    validated: number;
+    invoiced: number;
+    cancelled: number;
+  };
+  monthlyRevenue: { month: string; revenue: number }[];
+  monthlyExpenses: { month: string; expenses: number }[];
+  recentDevis: {
+    id: string;
+    reference: string;
+    clientName: string;
+    totalAmount: number;
+    status: DevisStatus;
+    createdAt: string;
+  }[];
+}
+
+export interface InvoiceFull {
+  id: string;
+  reference: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: 'PENDING' | 'PARTIAL' | 'PAID';
+  createdAt: string;
+  client: Client;
+  devis?: Devis[];
+  items: InvoiceItem[];
+}
+
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export type ExpenseCategory = 'MATERIAL' | 'EQUIPMENT' | 'UTILITIES' | 'SALARY' | 'RENT' | 'OTHER';
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserInput {
+  username: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  machines?: MachineType[];
+}
+
+export interface CreateClientInput {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface CreateExpenseInput {
+  description: string;
+  amount: number;
+  category: ExpenseCategory;
+  date: string;
+  notes?: string;
+}

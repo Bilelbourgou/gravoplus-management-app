@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
 import { devisApi } from '../services';
+import { useAuthStore } from '../store/auth.store';
 import { colors, statusColors, machineColors } from '../theme/colors';
 import type { Devis, DevisStatus, MachineType } from '../types';
 import type { HistoryStackParamList } from '../navigation/MainNavigator';
@@ -17,6 +18,7 @@ type Props = {
 
 export function DevisDetailScreen({ route }: Props) {
   const { devisId } = route.params;
+  const { user } = useAuthStore();
   const [devis, setDevis] = useState<Devis | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +73,9 @@ export function DevisDetailScreen({ route }: Props) {
                 </Text>
               </View>
               <Text style={styles.lineDescription}>{line.description || 'Sans description'}</Text>
-              <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+              {user?.role !== 'EMPLOYEE' && (
+                <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+              )}
             </View>
           ))}
         </View>
@@ -83,7 +87,9 @@ export function DevisDetailScreen({ route }: Props) {
           {devis.services.map((service) => (
             <View key={service.id} style={styles.serviceItem}>
               <Text style={styles.serviceName}>{service.service.name}</Text>
-              <Text style={styles.servicePrice}>{Number(service.price).toFixed(2)} TND</Text>
+              {user?.role !== 'EMPLOYEE' && (
+                <Text style={styles.servicePrice}>{Number(service.price).toFixed(2)} TND</Text>
+              )}
             </View>
           ))}
         </View>
@@ -99,10 +105,12 @@ export function DevisDetailScreen({ route }: Props) {
         </View>
       )}
 
-      <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
-      </View>
+      {user?.role !== 'EMPLOYEE' && (
+        <View style={styles.totalCard}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }

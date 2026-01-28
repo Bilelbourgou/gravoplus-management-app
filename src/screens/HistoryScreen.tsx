@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Act
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { devisApi } from '../services';
+import { useAuthStore } from '../store/auth.store';
 import { colors, statusColors } from '../theme/colors';
 import type { Devis, DevisStatus } from '../types';
 import type { HistoryStackParamList } from '../navigation/MainNavigator';
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function HistoryScreen({ navigation }: Props) {
+  const { user } = useAuthStore();
   const [devisList, setDevisList] = useState<Devis[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +56,9 @@ export function HistoryScreen({ navigation }: Props) {
       </View>
       <Text style={styles.clientName}>{item.client.name}</Text>
       <View style={styles.devisFooter}>
-        <Text style={styles.amount}>{Number(item.totalAmount).toFixed(2)} TND</Text>
+        {user?.role !== 'EMPLOYEE' && (
+          <Text style={styles.amount}>{Number(item.totalAmount).toFixed(2)} TND</Text>
+        )}
         <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</Text>
       </View>
     </TouchableOpacity>

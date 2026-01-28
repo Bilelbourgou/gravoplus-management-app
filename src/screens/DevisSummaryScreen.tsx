@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { CommonActions } from '@react-navigation/native';
 import { devisApi } from '../services';
+import { useAuthStore } from '../store/auth.store';
 import { colors, statusColors, machineColors } from '../theme/colors';
 import type { Devis, MachineType } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
@@ -16,6 +17,7 @@ type Props = {
 
 export function DevisSummaryScreen({ navigation, route }: Props) {
   const { devisId } = route.params;
+  const { user } = useAuthStore();
   const [devis, setDevis] = useState<Devis | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +73,9 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
                 </Text>
               </View>
               <Text style={styles.lineDescription}>{line.description || 'Sans description'}</Text>
-              <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+              {user?.role !== 'EMPLOYEE' && (
+                <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+              )}
             </View>
           ))}
         </View>
@@ -82,16 +86,20 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
             {devis.services.map((service) => (
               <View key={service.id} style={styles.serviceItem}>
                 <Text style={styles.serviceName}>{service.service.name}</Text>
+              {user?.role !== 'EMPLOYEE' && (
                 <Text style={styles.servicePrice}>{Number(service.price).toFixed(2)} TND</Text>
+              )}
               </View>
             ))}
           </View>
         )}
 
-        <View style={styles.totalSection}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
-        </View>
+        {user?.role !== 'EMPLOYEE' && (
+          <View style={styles.totalSection}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>

@@ -88,7 +88,9 @@ export function HomeScreen() {
                 </View>
                 <Text style={styles.devisClient}>{devis.client.name}</Text>
                 <View style={styles.devisFooter}>
-                  <Text style={styles.devisAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
+                  {user?.role !== 'EMPLOYEE' && (
+                    <Text style={styles.devisAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
+                  )}
                   <Text style={styles.devisDate}>
                     {new Date(devis.createdAt).toLocaleDateString('fr-FR')}
                   </Text>

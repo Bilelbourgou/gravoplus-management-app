@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { devisApi, materialsApi } from '../services';
+import { useAuthStore } from '../store/auth.store';
 import { colors, machineColors } from '../theme/colors';
 import type { Material, MachineType, DevisLine } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
@@ -15,6 +16,7 @@ type Props = {
 
 export function CalculationScreen({ navigation, route }: Props) {
   const { devisId, machineType } = route.params;
+  const { user } = useAuthStore();
   const [minutes, setMinutes] = useState('');
   const [meters, setMeters] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -137,7 +139,9 @@ export function CalculationScreen({ navigation, route }: Props) {
                   {line.meters && <Text style={styles.lineDetailText}>{line.meters} m</Text>}
                   {line.quantity && <Text style={styles.lineDetailText}>{line.quantity} unités</Text>}
                 </View>
-                <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+                {user?.role !== 'EMPLOYEE' && (
+                  <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.removeButton}

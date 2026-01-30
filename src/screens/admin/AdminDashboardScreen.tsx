@@ -111,10 +111,28 @@ export function AdminDashboardScreen() {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickAction}
+            onPress={() => navigation.navigate('AdminDevis')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#f9731620' }]}>
+              <Ionicons name="document-text" size={22} color="#f97316" />
+            </View>
+            <Text style={styles.quickActionText}>Devis</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
+            onPress={() => navigation.navigate('AdminInvoices')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#22c55e20' }]}>
+              <Ionicons name="receipt" size={22} color="#22c55e" />
+            </View>
+            <Text style={styles.quickActionText}>Factures</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
             onPress={() => navigation.navigate('AdminClients')}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: '#3b82f620' }]}>
-              <Ionicons name="people" size={24} color="#3b82f6" />
+              <Ionicons name="people" size={22} color="#3b82f6" />
             </View>
             <Text style={styles.quickActionText}>Clients</Text>
           </TouchableOpacity>
@@ -123,16 +141,25 @@ export function AdminDashboardScreen() {
             onPress={() => navigation.navigate('AdminEmployees')}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: '#8b5cf620' }]}>
-              <Ionicons name="person" size={24} color="#8b5cf6" />
+              <Ionicons name="person" size={22} color="#8b5cf6" />
             </View>
             <Text style={styles.quickActionText}>Employés</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
+            onPress={() => navigation.navigate('AdminExpenses')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#ef444420' }]}>
+              <Ionicons name="wallet" size={22} color="#ef4444" />
+            </View>
+            <Text style={styles.quickActionText}>Dépenses</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
             onPress={() => navigation.navigate('AdminSettings')}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#f9731620' }]}>
-              <Ionicons name="settings" size={24} color="#f97316" />
+            <View style={[styles.quickActionIcon, { backgroundColor: '#6b728020' }]}>
+              <Ionicons name="settings" size={22} color="#6b7280" />
             </View>
             <Text style={styles.quickActionText}>Paramètres</Text>
           </TouchableOpacity>
@@ -247,13 +274,13 @@ const styles = StyleSheet.create({
   profitInfo: { flex: 1 },
   profitLabel: { fontSize: 14, color: colors.text.muted },
   profitValue: { fontSize: 28, fontWeight: '700', marginTop: 4 },
-  quickActions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, gap: 12 },
+  quickActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24, gap: 10 },
   quickAction: {
-    flex: 1, backgroundColor: colors.background.surface, padding: 16, borderRadius: 12,
+    width: '31%', backgroundColor: colors.background.surface, padding: 14, borderRadius: 12,
     alignItems: 'center', borderWidth: 1, borderColor: colors.border.subtle,
   },
-  quickActionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  quickActionText: { fontSize: 13, fontWeight: '500', color: colors.text.secondary },
+  quickActionIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  quickActionText: { fontSize: 12, fontWeight: '500', color: colors.text.secondary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   statCard: {
     width: '47%', backgroundColor: colors.background.surface, padding: 16, borderRadius: 12,

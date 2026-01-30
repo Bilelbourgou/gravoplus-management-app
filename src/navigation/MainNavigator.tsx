@@ -18,6 +18,9 @@ import {
   AdminClientsScreen,
   AdminEmployeesScreen,
   AdminSettingsScreen,
+  AdminDevisScreen,
+  AdminInvoicesScreen,
+  AdminExpensesScreen,
 } from '../screens/admin';
 
 export type MainTabParamList = {
@@ -32,6 +35,9 @@ export type AdminStackParamList = {
   AdminClients: undefined;
   AdminEmployees: undefined;
   AdminSettings: undefined;
+  AdminDevis: undefined;
+  AdminInvoices: undefined;
+  AdminExpenses: undefined;
 };
 
 export type NewDevisStackParamList = {
@@ -140,6 +146,21 @@ function AdminNavigator() {
       <AdminStack.Screen
         name="AdminSettings"
         component={AdminSettingsScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminDevis"
+        component={AdminDevisScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminInvoices"
+        component={AdminInvoicesScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminExpenses"
+        component={AdminExpensesScreen}
         options={{ headerShown: false }}
       />
     </AdminStack.Navigator>

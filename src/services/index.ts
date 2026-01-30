@@ -17,6 +17,7 @@ import {
   CreateUserInput,
   CreateClientInput,
   CreateExpenseInput,
+  ClientBalanceData,
 } from '../types';
 
 // Auth
@@ -39,6 +40,10 @@ export const clientsApi = {
   },
   search: async (query: string): Promise<Client[]> => {
     const res = await api.get<ApiResponse<Client[]>>('/clients/search', { params: { q: query } });
+    return res.data.data!;
+  },
+  getBalance: async (id: string): Promise<ClientBalanceData> => {
+    const res = await api.get<ApiResponse<ClientBalanceData>>(`/clients/${id}/balance`);
     return res.data.data!;
   },
   create: async (data: CreateClientInput): Promise<Client> => {
@@ -181,6 +186,12 @@ export const usersApi = {
 };
 
 // Invoices (Admin)
+export interface DirectInvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export const invoicesApi = {
   getAll: async (): Promise<InvoiceFull[]> => {
     const res = await api.get<ApiResponse<InvoiceFull[]>>('/invoices');
@@ -188,6 +199,10 @@ export const invoicesApi = {
   },
   createFromDevis: async (devisIds: string[]): Promise<InvoiceFull> => {
     const res = await api.post<ApiResponse<InvoiceFull>>('/invoices/from-devis', { devisIds });
+    return res.data.data!;
+  },
+  createDirect: async (clientId: string, items: DirectInvoiceItem[]): Promise<InvoiceFull> => {
+    const res = await api.post<ApiResponse<InvoiceFull>>('/invoices/direct', { clientId, items });
     return res.data.data!;
   },
 };

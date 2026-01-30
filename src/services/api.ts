@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { ApiResponse } from '../types';
 
-const API_BASE_URL = 'http://192.168.1.163:3001/api'; // Update with your backend IP
+const API_BASE_URL = 'https://gravoplus.com/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

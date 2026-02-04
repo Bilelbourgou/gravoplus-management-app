@@ -189,11 +189,9 @@ export function AdminEmployeesScreen() {
           )}
         </View>
       </View>
-      {item.isActive && (
-        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeactivate(item)}>
-          <Ionicons name="person-remove-outline" size={20} color={colors.error[500]} />
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeactivate(item)}>
+        <Ionicons name="person-remove-outline" size={20} color={colors.error[500]} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -219,6 +217,7 @@ export function AdminEmployeesScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        style={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary[500]} />
         }
@@ -357,12 +356,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingVertical: 16,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
   },
   title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
   addButton: {
     width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primary[500],
     justifyContent: 'center', alignItems: 'center',
   },
+  list: { width: '100%', maxWidth: 600, alignSelf: 'center', flex: 1 },
   listContent: { paddingHorizontal: 20, paddingBottom: 20 },
   employeeCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -392,6 +393,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.background.base, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     maxHeight: '90%',
+    width: '100%', maxWidth: 600, alignSelf: 'center',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

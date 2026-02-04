@@ -252,10 +252,16 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.base },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.base },
   errorText: { color: colors.text.muted, marginTop: 12, fontSize: 16 },
-  header: { paddingHorizontal: 20, paddingVertical: 16 },
+  header: {
+    paddingHorizontal: 20, paddingVertical: 16,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
+  },
   title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
   subtitle: { fontSize: 14, color: colors.text.muted, marginTop: 4 },
-  content: { flex: 1, paddingHorizontal: 20 },
+  content: {
+    flex: 1, paddingHorizontal: 20,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
+  },
   financialRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   financialCard: {
     flex: 1, padding: 16, borderRadius: 16, alignItems: 'center',

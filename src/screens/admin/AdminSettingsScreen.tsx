@@ -533,11 +533,15 @@ export function AdminSettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.base },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.base },
-  header: { paddingHorizontal: 20, paddingVertical: 16 },
+  header: {
+    paddingHorizontal: 20, paddingVertical: 16,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
+  },
   title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
   tabsContainer: {
     flexDirection: 'row', marginHorizontal: 20, backgroundColor: colors.background.surface,
     borderRadius: 12, padding: 4, marginBottom: 16,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -546,7 +550,10 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: colors.background.base },
   tabText: { fontSize: 13, fontWeight: '500', color: colors.text.muted },
   tabTextActive: { color: colors.primary[500] },
-  content: { flex: 1, paddingHorizontal: 20 },
+  content: {
+    flex: 1, paddingHorizontal: 20,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
+  },
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 16 },
@@ -581,7 +588,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: colors.text.muted },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   smallModal: {
-    backgroundColor: colors.background.base, borderRadius: 16, padding: 24, width: '85%',
+    backgroundColor: colors.background.base, borderRadius: 16, padding: 24,
+    width: '85%', maxWidth: 500,
   },
   modalTitle: { fontSize: 20, fontWeight: '600', color: colors.text.primary, marginBottom: 4 },
   modalSubtitle: { fontSize: 14, color: colors.text.muted, marginBottom: 20 },
@@ -596,7 +604,7 @@ const styles = StyleSheet.create({
   modalSaveText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   formModal: {
     backgroundColor: colors.background.base, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '80%', width: '100%', position: 'absolute', bottom: 0,
+    maxHeight: '80%', width: '100%', maxWidth: 600, alignSelf: 'center', position: 'absolute', bottom: 0,
   },
   formModalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

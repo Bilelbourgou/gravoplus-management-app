@@ -186,6 +186,7 @@ export function AdminInvoicesScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        style={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary[500]} />
         }
@@ -291,6 +292,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingVertical: 16,
+    width: '100%', maxWidth: 600, alignSelf: 'center',
   },
   title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
   subtitle: { fontSize: 14, color: colors.text.muted, marginTop: 4 },
@@ -298,6 +300,7 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primary[500],
     justifyContent: 'center', alignItems: 'center',
   },
+  list: { width: '100%', maxWidth: 600, alignSelf: 'center' },
   listContent: { paddingHorizontal: 20, paddingBottom: 20 },
   invoiceCard: {
     backgroundColor: colors.background.surface, padding: 16, borderRadius: 12, marginBottom: 12,
@@ -323,6 +326,7 @@ const styles = StyleSheet.create({
   createModal: {
     backgroundColor: colors.background.base, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     maxHeight: '85%',
+    width: '100%', maxWidth: 600, alignSelf: 'center', position: 'absolute', bottom: 0,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

@@ -559,32 +559,35 @@ export function AdminClientsScreen() {
                   </View>
                 )}
 
-                {/* Invoice Actions */}
-                <View style={styles.invoiceActions}>
-                  <Text style={styles.actionsTitle}>Créer une facture</Text>
-                  <View style={styles.actionsRow}>
-                    {(balanceData.pendingDevis?.length || 0) > 0 && (
-                      <TouchableOpacity 
-                        style={styles.actionButton} 
-                        onPress={() => openDevisInvoiceModal()}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="document-text" size={20} color="#fff" />
-                        <Text style={styles.actionButtonText}>Depuis devis</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                      style={[styles.actionButton, styles.directActionButton]} 
-                      onPress={() => openDirectInvoiceModal()}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="add-circle" size={20} color="#fff" />
-                      <Text style={styles.actionButtonText}>Facture directe</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                {/* Invoice Actions - Now outside ScrollView for sticky footer */}
               </ScrollView>
             ) : null}
+
+            {balanceData && !loadingBalance && (
+              <View style={styles.invoiceActions}>
+                <Text style={styles.actionsTitle}>Créer une facture</Text>
+                <View style={styles.actionsRow}>
+                  {(balanceData.pendingDevis?.length || 0) > 0 && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => openDevisInvoiceModal()}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="document-text" size={20} color="#fff" />
+                      <Text style={styles.actionButtonText}>Depuis devis</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.directActionButton]}
+                    onPress={() => openDirectInvoiceModal()}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add-circle" size={20} color="#fff" />
+                    <Text style={styles.actionButtonText}>Facture directe</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -806,6 +809,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: colors.background.base, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     maxHeight: '90%',
+    width: '100%', maxWidth: 600, alignSelf: 'center',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -839,6 +843,8 @@ const styles = StyleSheet.create({
   balanceModalContent: {
     backgroundColor: colors.background.base, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     maxHeight: '85%',
+    width: '100%', maxWidth: 600, alignSelf: 'center',
+    display: 'flex', flexDirection: 'column',
   },
   balanceLoading: { padding: 60, alignItems: 'center' },
   balanceBody: { padding: 20 },
@@ -886,7 +892,11 @@ const styles = StyleSheet.create({
   noDataState: { alignItems: 'center', padding: 40 },
   noDataText: { fontSize: 14, color: colors.text.muted, marginTop: 12 },
   // Invoice actions styles
-  invoiceActions: { marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.border.subtle },
+  // Invoice actions styles
+  invoiceActions: {
+    padding: 20, borderTopWidth: 1, borderTopColor: colors.border.subtle,
+    backgroundColor: colors.background.base,
+  },
   actionsTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary, marginBottom: 12 },
   actionsRow: { flexDirection: 'row', gap: 12 },
   actionButton: {

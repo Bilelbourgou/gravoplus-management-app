@@ -265,3 +265,28 @@ export interface ClientBalanceData {
   invoices: ClientBalanceInvoice[];
   pendingDevis: ClientBalancePendingDevis[];
 }
+
+export interface Payment {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export interface PaymentStats {
+  totalAmount: number;
+  totalPaid: number;
+  remaining: number;
+  percentPaid: number;
+  isPaid: boolean;
+}
+
+export interface CreatePaymentInput {
+  amount: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  reference?: string;
+  notes?: string;
+}

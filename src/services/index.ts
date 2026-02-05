@@ -18,6 +18,9 @@ import {
   CreateClientInput,
   CreateExpenseInput,
   ClientBalanceData,
+  Payment,
+  PaymentStats,
+  CreatePaymentInput,
 } from '../types';
 
 // Auth
@@ -204,6 +207,25 @@ export const invoicesApi = {
   createDirect: async (clientId: string, items: DirectInvoiceItem[]): Promise<InvoiceFull> => {
     const res = await api.post<ApiResponse<InvoiceFull>>('/invoices/direct', { clientId, items });
     return res.data.data!;
+  },
+};
+
+// Payments
+export const paymentsApi = {
+  getByInvoice: async (invoiceId: string): Promise<Payment[]> => {
+    const res = await api.get<ApiResponse<Payment[]>>(`/payments/invoice/${invoiceId}`);
+    return res.data.data!;
+  },
+  getStats: async (invoiceId: string): Promise<PaymentStats> => {
+    const res = await api.get<ApiResponse<PaymentStats>>(`/payments/invoice/${invoiceId}/stats`);
+    return res.data.data!;
+  },
+  create: async (invoiceId: string, data: CreatePaymentInput): Promise<Payment> => {
+    const res = await api.post<ApiResponse<Payment>>(`/payments/invoice/${invoiceId}`, data);
+    return res.data.data!;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/payments/${id}`);
   },
 };
 

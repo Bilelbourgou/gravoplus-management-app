@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { PaymentModal } from '../../components/PaymentModal';
 import { invoicesApi, devisApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { InvoiceFull, Devis } from '../../types';
@@ -38,6 +39,7 @@ export function AdminInvoicesScreen() {
   const [validatedDevis, setValidatedDevis] = useState<Devis[]>([]);
   const [selectedDevisIds, setSelectedDevisIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceFull | null>(null);
 
   const fetchInvoices = async () => {
     try {
@@ -157,6 +159,14 @@ export function AdminInvoicesScreen() {
         <Text style={styles.date}>
           {new Date(item.createdAt).toLocaleDateString('fr-FR')}
         </Text>
+
+        <TouchableOpacity 
+          style={styles.paymentButton}
+          onPress={() => setSelectedInvoiceForPayment(item)}
+        >
+          <Ionicons name="card-outline" size={16} color="#fff" />
+          <Text style={styles.paymentButtonText}>Gérer les paiements</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -197,6 +207,18 @@ export function AdminInvoicesScreen() {
           </View>
         }
       />
+
+      {selectedInvoiceForPayment && (
+        <PaymentModal
+          visible={!!selectedInvoiceForPayment}
+          invoiceId={selectedInvoiceForPayment.id}
+          invoiceReference={selectedInvoiceForPayment.reference}
+          onClose={() => setSelectedInvoiceForPayment(null)}
+          onSuccess={() => {
+            fetchInvoices();
+          }}
+        />
+      )}
 
       {/* Create Invoice Modal */}
       <Modal visible={createModalVisible} animationType="slide" transparent>
@@ -373,4 +395,19 @@ const styles = StyleSheet.create({
   },
   createButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   buttonDisabled: { opacity: 0.7 },
+  paymentButton: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[500],
+    padding: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  paymentButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

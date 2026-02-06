@@ -20,6 +20,8 @@ export function CalculationScreen({ navigation, route }: Props) {
   const [minutes, setMinutes] = useState('');
   const [meters, setMeters] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+
   const [description, setDescription] = useState('');
   const [materialId, setMaterialId] = useState<string | undefined>();
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -49,6 +51,7 @@ export function CalculationScreen({ navigation, route }: Props) {
     setMinutes('');
     setMeters('');
     setQuantity('');
+    setUnitPrice('');
     setDescription('');
     setMaterialId(undefined);
   };
@@ -62,6 +65,7 @@ export function CalculationScreen({ navigation, route }: Props) {
         minutes: minutes ? parseFloat(minutes) : undefined,
         meters: meters ? parseFloat(meters) : undefined,
         quantity: quantity ? parseInt(quantity) : undefined,
+        unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
         materialId,
       });
       const updatedDevis = await devisApi.getById(devisId);
@@ -194,7 +198,7 @@ export function CalculationScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {machineType === 'PANNEAUX' && (
+        {(machineType === 'PANNEAUX') && (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Quantité *</Text>
             <TextInput
@@ -204,6 +208,20 @@ export function CalculationScreen({ navigation, route }: Props) {
               keyboardType="number-pad"
               value={quantity}
               onChangeText={setQuantity}
+            />
+          </View>
+        )}
+
+        {machineType === 'SERVICE_MAINTENANCE' && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Prix (TND) *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="decimal-pad"
+              value={unitPrice}
+              onChangeText={setUnitPrice}
             />
           </View>
         )}

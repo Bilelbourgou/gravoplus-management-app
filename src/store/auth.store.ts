@@ -26,13 +26,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authApi.login(username, password);
       await setApiToken(response.token);
-      
+
       // Fetch allowed machines for employee
       let machines: MachineType[] = [];
       if (response.user.role === 'EMPLOYEE') {
         machines = await machinesApi.getMyMachines();
       } else {
-        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX'];
+        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE'];
       }
 
       set({
@@ -65,12 +65,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const user = await authApi.me();
-      
+
       let machines: MachineType[] = [];
       if (user.role === 'EMPLOYEE') {
         machines = await machinesApi.getMyMachines();
       } else {
-        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX'];
+        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE'];
       }
 
       set({

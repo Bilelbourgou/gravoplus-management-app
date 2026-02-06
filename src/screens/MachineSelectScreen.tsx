@@ -13,6 +13,7 @@ const MACHINE_INFO: Record<MachineType, { icon: string; label: string; descripti
   LASER: { icon: 'flash', label: 'Laser', description: 'Gravure Laser - par minute + matériau' },
   CHAMPS: { icon: 'layers', label: 'Champs', description: 'Gravure Champs - par mètre' },
   PANNEAUX: { icon: 'grid', label: 'Panneaux', description: 'Panneaux - par unité' },
+  SERVICE_MAINTENANCE: { icon: 'construct', label: 'Maintenance', description: 'Maintenance - prix forfaitaire' },
 };
 
 type Props = {

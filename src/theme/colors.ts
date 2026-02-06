@@ -68,4 +68,5 @@ export const machineColors = {
   LASER: colors.warning[500],
   CHAMPS: colors.success[500],
   PANNEAUX: colors.info[500],
+  SERVICE_MAINTENANCE: colors.error[500], // Use a distinct color, e.g. error (red) or maybe purple/secondary if available. Let's stick to standard palette.
 };

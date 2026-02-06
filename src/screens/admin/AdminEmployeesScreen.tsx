@@ -20,7 +20,7 @@ import { usersApi } from '../../services';
 import { colors, machineColors } from '../../theme/colors';
 import type { User, MachineType, CreateUserInput } from '../../types';
 
-const MACHINE_TYPES: MachineType[] = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX'];
+const MACHINE_TYPES: MachineType[] = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE'];
 
 export function AdminEmployeesScreen() {
   const [employees, setEmployees] = useState<User[]>([]);

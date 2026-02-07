@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { machinesApi, materialsApi, servicesApi } from '../../services';
 import { colors, machineColors } from '../../theme/colors';
-import type { MachinePricing, Material, FixedService, MachineType } from '../../types';
+import type { Machine, Material, FixedService } from '../../types';
 
 type TabType = 'pricing' | 'materials' | 'services';
 
@@ -26,11 +26,11 @@ export function AdminSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  const [pricing, setPricing] = useState<MachinePricing[]>([]);
+  const [pricing, setPricing] = useState<Machine[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [services, setServices] = useState<FixedService[]>([]);
 
-  const [editPriceModal, setEditPriceModal] = useState<MachinePricing | null>(null);
+  const [editPriceModal, setEditPriceModal] = useState<Machine | null>(null);
   const [newPrice, setNewPrice] = useState('');
 
   const [materialModal, setMaterialModal] = useState(false);
@@ -46,7 +46,7 @@ export function AdminSettingsScreen() {
   const fetchData = async () => {
     try {
       const [pricingData, materialsData, servicesData] = await Promise.all([
-        machinesApi.getPricing(),
+        machinesApi.getAll(),
         materialsApi.getAll(),
         servicesApi.getAll(),
       ]);
@@ -75,7 +75,7 @@ export function AdminSettingsScreen() {
     if (!editPriceModal || !newPrice) return;
     setSaving(true);
     try {
-      await machinesApi.updatePricing(editPriceModal.machineType as MachineType, parseFloat(newPrice));
+      await machinesApi.update(editPriceModal.id, { defaultPrice: parseFloat(newPrice) });
       setEditPriceModal(null);
       fetchData();
     } catch (error) {
@@ -256,21 +256,21 @@ export function AdminSettingsScreen() {
         {activeTab === 'pricing' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tarifs par machine</Text>
-            {pricing.map((p) => (
+            {pricing.map((m) => (
               <TouchableOpacity
-                key={p.id}
+                key={m.id}
                 style={styles.pricingCard}
-                onPress={() => { setEditPriceModal(p); setNewPrice(String(p.pricePerUnit || '')); }}
+                onPress={() => { setEditPriceModal(m); setNewPrice(String(m.defaultPrice || '')); }}
               >
-                <View style={[styles.machineIcon, { backgroundColor: machineColors[p.machineType as MachineType] + '20' }]}>
-                  <Ionicons name="hardware-chip" size={24} color={machineColors[p.machineType as MachineType]} />
+                <View style={[styles.machineIcon, { backgroundColor: (machineColors as any)[m.key] ? (machineColors as any)[m.key] + '20' : colors.primary[500] + '20' }]}>
+                  <Ionicons name="hardware-chip" size={24} color={(machineColors as any)[m.key] || colors.primary[500]} />
                 </View>
                 <View style={styles.pricingInfo}>
-                  <Text style={styles.machineName}>{p.machineType}</Text>
-                  <Text style={styles.machineDesc}>{p.description || 'Prix par unité'}</Text>
+                  <Text style={styles.machineName}>{m.name}</Text>
+                  <Text style={styles.machineDesc}>{m.description || 'Prix par défaut'}</Text>
                 </View>
                 <View style={styles.priceContainer}>
-                  <Text style={styles.priceValue}>{Number(p.pricePerUnit || 0).toFixed(2)}</Text>
+                  <Text style={styles.priceValue}>{Number(m.defaultPrice || 0).toFixed(2)}</Text>
                   <Text style={styles.priceCurrency}>TND</Text>
                 </View>
               </TouchableOpacity>

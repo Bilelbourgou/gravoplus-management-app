@@ -14,6 +14,7 @@ const MACHINE_INFO: Record<MachineType, { icon: string; label: string; descripti
   CHAMPS: { icon: 'layers', label: 'Champs', description: 'Gravure Champs - par mètre' },
   PANNEAUX: { icon: 'grid', label: 'Panneaux', description: 'Panneaux - par unité' },
   SERVICE_MAINTENANCE: { icon: 'construct', label: 'Maintenance', description: 'Maintenance - prix forfaitaire' },
+  VENTE_MATERIAU: { icon: 'cube', label: 'Vente Matériau', description: 'Vente Matériau - par m²' },
 };
 
 type Props = {

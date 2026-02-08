@@ -1,5 +1,5 @@
 export type UserRole = 'ADMIN' | 'EMPLOYEE';
-export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE';
+export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE' | 'VENTE_MATERIAU';
 export type DevisStatus = 'DRAFT' | 'VALIDATED' | 'INVOICED' | 'CANCELLED';
 
 export interface User {
@@ -88,6 +88,9 @@ export interface DevisLine {
   unitPrice: number;
   materialCost: number;
   lineTotal: number;
+  width?: number;
+  height?: number;
+  dimensionUnit?: string;
   createdAt: string;
   materialId?: string;
   material?: Material;
@@ -133,6 +136,27 @@ export interface AddDevisLineInput {
   quantity?: number;
   unitPrice?: number;
   materialId?: string;
+  width?: number;
+  height?: number;
+  dimensionUnit?: string;
+}
+
+export interface DevisLine {
+  id: string;
+  machineType: MachineType;
+  description?: string;
+  minutes?: number;
+  meters?: number;
+  quantity?: number;
+  unitPrice: number;
+  materialCost: number;
+  lineTotal: number;
+  width?: number;
+  height?: number;
+  dimensionUnit?: string;
+  createdAt: string;
+  materialId?: string;
+  material?: Material;
 }
 
 // Admin types

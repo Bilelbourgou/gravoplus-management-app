@@ -21,6 +21,9 @@ export function CalculationScreen({ navigation, route }: Props) {
   const [meters, setMeters] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  const [dimensionUnit, setDimensionUnit] = useState('m');
 
   const [description, setDescription] = useState('');
   const [materialId, setMaterialId] = useState<string | undefined>();
@@ -32,7 +35,7 @@ export function CalculationScreen({ navigation, route }: Props) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (machineType === 'LASER') {
+        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU') {
           const mats = await materialsApi.getAll();
           setMaterials(mats);
         }
@@ -52,6 +55,9 @@ export function CalculationScreen({ navigation, route }: Props) {
     setMeters('');
     setQuantity('');
     setUnitPrice('');
+    setWidth('');
+    setHeight('');
+    setDimensionUnit('m');
     setDescription('');
     setMaterialId(undefined);
   };
@@ -66,6 +72,9 @@ export function CalculationScreen({ navigation, route }: Props) {
         meters: meters ? parseFloat(meters) : undefined,
         quantity: quantity ? parseInt(quantity) : undefined,
         unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
+        width: width ? parseFloat(width) : undefined,
+        height: height ? parseFloat(height) : undefined,
+        dimensionUnit,
         materialId,
       });
       const updatedDevis = await devisApi.getById(devisId);
@@ -142,6 +151,11 @@ export function CalculationScreen({ navigation, route }: Props) {
                   {line.minutes && <Text style={styles.lineDetailText}>{line.minutes} min</Text>}
                   {line.meters && <Text style={styles.lineDetailText}>{line.meters} m</Text>}
                   {line.quantity && <Text style={styles.lineDetailText}>{line.quantity} unités</Text>}
+                  {line.width && line.height && (
+                    <Text style={styles.lineDetailText}>
+                      {line.width} x {line.height} {line.dimensionUnit}
+                    </Text>
+                  )}
                 </View>
                 {user?.role !== 'EMPLOYEE' && (
                   <Text style={styles.lineTotal}>{Number(line.lineTotal).toFixed(2)} TND</Text>
@@ -171,17 +185,81 @@ export function CalculationScreen({ navigation, route }: Props) {
         </View>
 
         {(machineType === 'CNC' || machineType === 'LASER') && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Minutes *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="decimal-pad"
-              value={minutes}
-              onChangeText={setMinutes}
-            />
-          </View>
+          <>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Minutes *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="decimal-pad"
+                value={minutes}
+                onChangeText={setMinutes}
+              />
+            </View>
+
+            <View style={styles.row}>
+               <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Largeur</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="decimal-pad"
+                  value={width}
+                  onChangeText={setWidth}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Hauteur</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="decimal-pad"
+                  value={height}
+                  onChangeText={setHeight}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unité</Text>
+              <View style={styles.unitSelector}>
+                <TouchableOpacity
+                  style={[styles.unitButton, dimensionUnit === 'm' && styles.unitButtonSelected]}
+                  onPress={() => setDimensionUnit('m')}
+                >
+                  <Text style={[styles.unitButtonText, dimensionUnit === 'm' && styles.unitButtonTextSelected]}>Mètres (m)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.unitButton, dimensionUnit === 'cm' && styles.unitButtonSelected]}
+                  onPress={() => setDimensionUnit('cm')}
+                >
+                  <Text style={[styles.unitButtonText, dimensionUnit === 'cm' && styles.unitButtonTextSelected]}>Centimètres (cm)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {materials.length > 0 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Matériau (optionnel)</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
+                  {materials.filter(m => m.isActive).map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
+                      onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
+                    >
+                      <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
+                        {m.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </>
         )}
 
         {machineType === 'CHAMPS' && (
@@ -226,23 +304,68 @@ export function CalculationScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {machineType === 'LASER' && materials.length > 0 && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Matériau (optionnel)</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
-              {materials.filter(m => m.isActive).map((m) => (
+        {machineType === 'VENTE_MATERIAU' && (
+           <>
+             <View style={styles.inputGroup}>
+                <Text style={styles.label}>Matériau *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
+                  {materials.filter(m => m.isActive).map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
+                      onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
+                    >
+                      <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
+                        {m.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.row}>
+               <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Largeur</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="decimal-pad"
+                  value={width}
+                  onChangeText={setWidth}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Hauteur</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="decimal-pad"
+                  value={height}
+                  onChangeText={setHeight}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Unité</Text>
+              <View style={styles.unitSelector}>
                 <TouchableOpacity
-                  key={m.id}
-                  style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
-                  onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
+                  style={[styles.unitButton, dimensionUnit === 'm' && styles.unitButtonSelected]}
+                  onPress={() => setDimensionUnit('m')}
                 >
-                  <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
-                    {m.name}
-                  </Text>
+                  <Text style={[styles.unitButtonText, dimensionUnit === 'm' && styles.unitButtonTextSelected]}>Mètres (m)</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+                <TouchableOpacity
+                  style={[styles.unitButton, dimensionUnit === 'cm' && styles.unitButtonSelected]}
+                  onPress={() => setDimensionUnit('cm')}
+                >
+                  <Text style={[styles.unitButtonText, dimensionUnit === 'cm' && styles.unitButtonTextSelected]}>Centimètres (cm)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+           </>
         )}
       </View>
 
@@ -380,4 +503,21 @@ const styles = StyleSheet.create({
   submitButtonDisabled: { opacity: 0.7 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   continueButtonText: { color: colors.primary[500], fontSize: 16, fontWeight: '600' },
+  row: { flexDirection: 'row', gap: 12 },
+  unitSelector: { flexDirection: 'row', gap: 8 },
+  unitButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    backgroundColor: colors.background.elevated,
+  },
+  unitButtonSelected: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  unitButtonText: { color: colors.text.secondary, fontSize: 14, fontWeight: '500' },
+  unitButtonTextSelected: { color: '#fff' },
 });

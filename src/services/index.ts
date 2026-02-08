@@ -253,11 +253,11 @@ export const expensesApi = {
 // Financial (Admin)
 export const financialApi = {
   getStats: async (): Promise<FinancialStats> => {
-    const res = await api.get<ApiResponse<FinancialStats>>('/financial/stats');
-    return res.data.data!;
+    const res = await api.get<FinancialStats>('/financial/stats');
+    return res.data;
   },
   getHistory: async (): Promise<FinancialClosure[]> => {
-    const res = await api.get<ApiResponse<FinancialClosure[]>>('/financial/history');
-    return res.data.data!;
+    const res = await api.get<FinancialClosure[]>('/financial/history');
+    return res.data;
   },
 };

@@ -163,6 +163,15 @@ export function AdminDashboardScreen() {
             </View>
             <Text style={styles.quickActionText}>Paramètres</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickAction}
+            onPress={() => navigation.navigate('AdminFinance')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#10b98120' }]}>
+              <Ionicons name="cash" size={22} color="#10b981" />
+            </View>
+            <Text style={styles.quickActionText}>Caisse</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Stats */}

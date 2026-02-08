@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'EMPLOYEE';
+export type UserRole = 'ADMIN' | 'SUPERADMIN' | 'EMPLOYEE';
 export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE' | 'VENTE_MATERIAU';
 export type DevisStatus = 'DRAFT' | 'VALIDATED' | 'INVOICED' | 'CANCELLED';
 
@@ -314,4 +314,60 @@ export interface CreatePaymentInput {
   paymentMethod?: string;
   reference?: string;
   notes?: string;
+}
+
+export interface FinancialStats {
+  periodStart: string | null;
+  periodEnd: string;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  scope?: string;
+  lastClosureDate: string | null;
+  payments: Array<{
+    id: string;
+    amount: number;
+    paymentMethod: string;
+    paymentDate: string;
+    reference: string;
+    invoice: {
+      reference: string;
+      client: { name: string };
+    };
+    createdBy?: {
+      firstName: string;
+      lastName: string;
+    };
+  }>;
+  expenses: Array<{
+    id: string;
+    amount: number;
+    description: string;
+    category: string;
+    date: string;
+    reference: string;
+    createdBy: { firstName: string; lastName: string };
+  }>;
+  revenueByEmployee: Array<{
+    employeeId: string;
+    employeeName: string;
+    totalAmount: number;
+    paymentCount: number;
+  }>;
+}
+
+export interface FinancialClosure {
+  id: string;
+  closureDate: string;
+  periodStart: string;
+  periodEnd: string;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  scope?: string;
+  notes?: string;
+  createdBy: {
+    firstName: string;
+    lastName: string;
+  };
 }

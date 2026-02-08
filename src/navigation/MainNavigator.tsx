@@ -21,6 +21,7 @@ import {
   AdminDevisScreen,
   AdminInvoicesScreen,
   AdminExpensesScreen,
+  AdminFinanceScreen,
 } from '../screens/admin';
 
 export type MainTabParamList = {
@@ -38,6 +39,7 @@ export type AdminStackParamList = {
   AdminDevis: undefined;
   AdminInvoices: undefined;
   AdminExpenses: undefined;
+  AdminFinance: undefined;
 };
 
 export type NewDevisStackParamList = {
@@ -163,13 +165,18 @@ function AdminNavigator() {
         component={AdminExpensesScreen}
         options={{ headerShown: false }}
       />
+      <AdminStack.Screen
+        name="AdminFinance"
+        component={AdminFinanceScreen}
+        options={{ headerShown: false }}
+      />
     </AdminStack.Navigator>
   );
 }
 
 export function MainNavigator() {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
 
   return (
     <Tab.Navigator

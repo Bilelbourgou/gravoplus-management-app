@@ -21,6 +21,8 @@ import {
   Payment,
   PaymentStats,
   CreatePaymentInput,
+  FinancialStats,
+  FinancialClosure,
 } from '../types';
 
 // Auth
@@ -245,5 +247,17 @@ export const expensesApi = {
   },
   delete: async (id: string): Promise<void> => {
     await api.delete(`/expenses/${id}`);
+  },
+};
+
+// Financial (Admin)
+export const financialApi = {
+  getStats: async (): Promise<FinancialStats> => {
+    const res = await api.get<ApiResponse<FinancialStats>>('/financial/stats');
+    return res.data.data!;
+  },
+  getHistory: async (): Promise<FinancialClosure[]> => {
+    const res = await api.get<ApiResponse<FinancialClosure[]>>('/financial/history');
+    return res.data.data!;
   },
 };

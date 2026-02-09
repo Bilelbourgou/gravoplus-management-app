@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -14,9 +14,18 @@ type Props = {
   route: RouteProp<NewDevisStackParamList, 'Calculation'>;
 };
 
+const MACHINE_ICONS: Record<string, string> = {
+  CNC: 'hardware-chip',
+  LASER: 'flash',
+  CHAMPS: 'layers',
+  PANNEAUX: 'grid',
+  SERVICE_MAINTENANCE: 'construct',
+  VENTE_MATERIAU: 'cube',
+};
+
 export function CalculationScreen({ navigation, route }: Props) {
   const { devisId, machineType } = route.params;
-  const { user } = useAuthStore();
+  const { user, allowedMachines } = useAuthStore();
   const [minutes, setMinutes] = useState('');
   const [meters, setMeters] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -65,27 +74,36 @@ export function CalculationScreen({ navigation, route }: Props) {
   const handleAddLine = async () => {
     setLoading(true);
     try {
-      await devisApi.addLine(devisId, {
-        machineType: machineType as MachineType,
-        description: description || undefined,
-        minutes: minutes ? parseFloat(minutes) : undefined,
-        meters: meters ? parseFloat(meters) : undefined,
-        quantity: quantity ? parseInt(quantity) : undefined,
-        unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
-        width: width ? parseFloat(width) : undefined,
-        height: height ? parseFloat(height) : undefined,
-        dimensionUnit,
-        materialId,
-      });
-      const updatedDevis = await devisApi.getById(devisId);
-      setLines(updatedDevis.lines || []);
-      resetForm();
+      const saved = await saveCurrentLine();
+      if (saved) {
+        const updatedDevis = await devisApi.getById(devisId);
+        setLines(updatedDevis.lines || []);
+        resetForm();
+      }
     } catch (error) {
-      console.error(error);
       Alert.alert('Erreur', 'Impossible d\'ajouter la ligne');
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveCurrentLine = async () => {
+    const hasData = minutes || meters || quantity || unitPrice || materialId || description || width || height;
+    if (!hasData) return false;
+
+    await devisApi.addLine(devisId, {
+      machineType: machineType as MachineType,
+      description: description || undefined,
+      minutes: minutes ? parseFloat(minutes) : undefined,
+      meters: meters ? parseFloat(meters) : undefined,
+      quantity: quantity ? parseInt(quantity) : undefined,
+      unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
+      width: width ? parseFloat(width) : undefined,
+      height: height ? parseFloat(height) : undefined,
+      dimensionUnit,
+      materialId,
+    });
+    return true;
   };
 
   const handleRemoveLine = async (lineId: string) => {
@@ -111,12 +129,27 @@ export function CalculationScreen({ navigation, route }: Props) {
     );
   };
 
-  const handleContinue = () => {
-    if (lines.length === 0) {
-      Alert.alert('Attention', 'Veuillez ajouter au moins une ligne avant de continuer');
-      return;
+  const handleContinue = async () => {
+    setLoading(true);
+    try {
+      await saveCurrentLine();
+      navigation.navigate('DevisSummary', { devisId });
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d\'enregistrer la ligne actuelle. Voulez-vous continuer sans l\'enregistrer ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Continuer', 
+            onPress: () => navigation.navigate('DevisSummary', { devisId }) 
+          }
+        ]
+      );
+    } finally {
+      setLoading(false);
     }
-    navigation.navigate('Services', { devisId });
   };
 
   const color = machineColors[machineType as MachineType];
@@ -131,10 +164,41 @@ export function CalculationScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={[styles.header, { borderColor: color }]}>
         <Text style={[styles.machineType, { color }]}>{machineType}</Text>
         <Text style={styles.headerSubtitle}>Entrez les données de calcul</Text>
+      </View>
+
+      {/* Machine Selector */}
+      <View style={styles.machineSelectorContainer}>
+        <Text style={styles.sectionLabel}>Changer de machine :</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.machineSelectorScroll}>
+          {allowedMachines.map((m) => (
+            <TouchableOpacity
+              key={m}
+              style={[
+                styles.machineSelectorItem,
+                machineType === m && { backgroundColor: machineColors[m as MachineType], borderColor: machineColors[m as MachineType] }
+              ]}
+              onPress={() => navigation.setParams({ machineType: m })}
+            >
+              <Ionicons 
+                name={MACHINE_ICONS[m] as any} 
+                size={18} 
+                color={machineType === m ? '#fff' : machineColors[m as MachineType]} 
+              />
+              <Text style={[styles.machineSelectorText, machineType === m && styles.machineSelectorTextSelected]}>
+                {m.replace('_', ' ')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Added Lines List */}
@@ -385,22 +449,31 @@ export function CalculationScreen({ navigation, route }: Props) {
           )}
         </TouchableOpacity>
         
-        {lines.length > 0 && (
-          <TouchableOpacity
-            style={[styles.continueButton]}
-            onPress={handleContinue}
-          >
-            <Text style={styles.continueButtonText}>Continuer</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.primary[500]} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[styles.continueButton, loading && styles.submitButtonDisabled]}
+          onPress={handleContinue}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.primary[500]} />
+          ) : (
+            <>
+              <Text style={styles.continueButtonText}>Continuer</Text>
+              <Ionicons name="arrow-forward" size={20} color={colors.primary[500]} />
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </ScrollView>
+  </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.base },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: { padding: 20 },
   header: { borderLeftWidth: 4, paddingLeft: 16, marginBottom: 24 },
   machineType: { fontSize: 24, fontWeight: '700' },
@@ -520,4 +593,37 @@ const styles = StyleSheet.create({
   },
   unitButtonText: { color: colors.text.secondary, fontSize: 14, fontWeight: '500' },
   unitButtonTextSelected: { color: '#fff' },
+  machineSelectorContainer: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.muted,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  machineSelectorScroll: {
+    flexDirection: 'row',
+  },
+  machineSelectorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.background.elevated,
+    borderRadius: 10,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  machineSelectorText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  machineSelectorTextSelected: {
+    color: '#fff',
+  },
 });

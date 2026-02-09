@@ -9,7 +9,6 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ClientSelectScreen } from '../screens/ClientSelectScreen';
 import { MachineSelectScreen } from '../screens/MachineSelectScreen';
 import { CalculationScreen } from '../screens/CalculationScreen';
-import { ServicesScreen } from '../screens/ServicesScreen';
 import { DevisSummaryScreen } from '../screens/DevisSummaryScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { DevisDetailScreen } from '../screens/DevisDetailScreen';
@@ -46,7 +45,6 @@ export type NewDevisStackParamList = {
   ClientSelect: undefined;
   MachineSelect: { clientId: string; devisId?: string };
   Calculation: { devisId: string; machineType: string };
-  Services: { devisId: string };
   DevisSummary: { devisId: string };
 };
 
@@ -84,11 +82,7 @@ function NewDevisNavigator() {
         component={CalculationScreen}
         options={{ title: 'Calcul' }}
       />
-      <NewDevisStack.Screen
-        name="Services"
-        component={ServicesScreen}
-        options={{ title: 'Services' }}
-      />
+
       <NewDevisStack.Screen
         name="DevisSummary"
         component={DevisSummaryScreen}

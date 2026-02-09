@@ -283,7 +283,11 @@ export function AdminClientsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}
+    >
+      <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Clients</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
@@ -763,11 +767,13 @@ export function AdminClientsScreen() {
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
+  </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.base },
+  keyboardAvoidingView: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.base },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

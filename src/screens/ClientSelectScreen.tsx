@@ -7,6 +7,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -96,8 +98,12 @@ export function ClientSelectScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}
+    >
+      <View style={styles.container}>
+        <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.text.muted} />
         <TextInput
           style={styles.searchInput}
@@ -127,7 +133,8 @@ export function ClientSelectScreen({ navigation }: Props) {
           </View>
         }
       />
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -135,6 +142,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.base,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

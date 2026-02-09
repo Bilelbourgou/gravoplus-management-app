@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { clientsApi, invoicesApi, DirectInvoiceItem } from '../../services';
@@ -61,9 +62,11 @@ export function AdminClientsScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchClients();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

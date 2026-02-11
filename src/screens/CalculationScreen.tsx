@@ -347,7 +347,7 @@ export function CalculationScreen({ navigation, route }: Props) {
               style={styles.input}
               placeholder="0"
               placeholderTextColor={colors.text.muted}
-              keyboardType="number-pad"
+              keyboardType="decimal-pad"
               value={quantity}
               onChangeText={setQuantity}
             />

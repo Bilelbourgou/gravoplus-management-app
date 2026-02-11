@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { devisApi, materialsApi } from '../services';
+import { devisApi, materialsApi, servicesApi } from '../services';
 import { useAuthStore } from '../store/auth.store';
 import { colors, machineColors } from '../theme/colors';
-import type { Material, MachineType, DevisLine } from '../types';
+import type { Material, MachineType, DevisLine, FixedService } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
 
 type Props = {
@@ -36,17 +36,24 @@ export function CalculationScreen({ navigation, route }: Props) {
 
   const [description, setDescription] = useState('');
   const [materialId, setMaterialId] = useState<string | undefined>();
+  const [serviceId, setServiceId] = useState<string | undefined>();
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [services, setServices] = useState<FixedService[]>([]);
   const [lines, setLines] = useState<DevisLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLines, setLoadingLines] = useState(true);
+  const [maintenanceType, setMaintenanceType] = useState<'manual' | 'material' | 'service'>('manual');
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU') {
+        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU' || machineType === 'SERVICE_MAINTENANCE') {
           const mats = await materialsApi.getAll();
           setMaterials(mats);
+        }
+        if (machineType === 'SERVICE_MAINTENANCE') {
+          const srvs = await servicesApi.getAll();
+          setServices(srvs);
         }
         const devis = await devisApi.getById(devisId);
         setLines(devis.lines || []);
@@ -69,6 +76,8 @@ export function CalculationScreen({ navigation, route }: Props) {
     setDimensionUnit('m');
     setDescription('');
     setMaterialId(undefined);
+    setServiceId(undefined);
+    setMaintenanceType('manual');
   };
 
   const handleAddLine = async () => {
@@ -96,12 +105,13 @@ export function CalculationScreen({ navigation, route }: Props) {
       description: description || undefined,
       minutes: minutes ? parseFloat(minutes) : undefined,
       meters: meters ? parseFloat(meters) : undefined,
-      quantity: quantity ? parseInt(quantity) : undefined,
+      quantity: quantity ? parseFloat(quantity) : undefined,
       unitPrice: unitPrice ? parseFloat(unitPrice) : undefined,
       width: width ? parseFloat(width) : undefined,
       height: height ? parseFloat(height) : undefined,
       dimensionUnit,
       materialId,
+      serviceId,
     });
     return true;
   };
@@ -355,17 +365,109 @@ export function CalculationScreen({ navigation, route }: Props) {
         )}
 
         {machineType === 'SERVICE_MAINTENANCE' && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Prix (TND) *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="decimal-pad"
-              value={unitPrice}
-              onChangeText={setUnitPrice}
-            />
-          </View>
+          <>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Type de calcul</Text>
+              <View style={styles.typeButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.typeButton, maintenanceType === 'manual' && styles.typeButtonActive]}
+                  onPress={() => { setMaintenanceType('manual'); setMaterialId(undefined); setServiceId(undefined); }}
+                >
+                  <Text style={[styles.typeButtonText, maintenanceType === 'manual' && styles.typeButtonTextActive]}>Prix manuel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, maintenanceType === 'material' && styles.typeButtonActive]}
+                  onPress={() => { setMaintenanceType('material'); setServiceId(undefined); setUnitPrice(''); }}
+                >
+                  <Text style={[styles.typeButtonText, maintenanceType === 'material' && styles.typeButtonTextActive]}>Matériau</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, maintenanceType === 'service' && styles.typeButtonActive]}
+                  onPress={() => { setMaintenanceType('service'); setMaterialId(undefined); setUnitPrice(''); }}
+                >
+                  <Text style={[styles.typeButtonText, maintenanceType === 'service' && styles.typeButtonTextActive]}>Service</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {maintenanceType === 'manual' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Prix (TND) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="decimal-pad"
+                  value={unitPrice}
+                  onChangeText={setUnitPrice}
+                />
+              </View>
+            )}
+
+            {maintenanceType === 'material' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Matériau *</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
+                    {materials.filter(m => m.isActive).map((m) => (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
+                        onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
+                      >
+                        <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
+                          {m.name} - {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Quantité</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="1"
+                    placeholderTextColor={colors.text.muted}
+                    keyboardType="decimal-pad"
+                    value={quantity}
+                    onChangeText={setQuantity}
+                  />
+                </View>
+              </>
+            )}
+
+            {maintenanceType === 'service' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Service *</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
+                    {services.filter(s => s.isActive).map((s) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        style={[styles.materialChip, serviceId === s.id && styles.materialChipSelected]}
+                        onPress={() => setServiceId(serviceId === s.id ? undefined : s.id)}
+                      >
+                        <Text style={[styles.materialChipText, serviceId === s.id && styles.materialChipTextSelected]}>
+                          {s.name} - {Number(s.price).toFixed(2)} TND
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Quantité</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="1"
+                    placeholderTextColor={colors.text.muted}
+                    keyboardType="number-pad"
+                    value={quantity}
+                    onChangeText={setQuantity}
+                  />
+                </View>
+              </>
+            )}
+          </>
         )}
 
         {machineType === 'VENTE_MATERIAU' && (
@@ -624,6 +726,32 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   machineSelectorTextSelected: {
+    color: '#fff',
+  },
+  typeButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  typeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.background.elevated,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+  },
+  typeButtonActive: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  typeButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text.secondary,
+  },
+  typeButtonTextActive: {
     color: '#fff',
   },
 });

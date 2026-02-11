@@ -83,6 +83,22 @@ export function AdminDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary[500]} />
         }
       >
+        {/* Daily Stats */}
+        <View style={styles.dailyRow}>
+          <View style={[styles.dailyCard, { borderLeftColor: '#3b82f6' }]}>
+            <Text style={styles.dailyValue}>{(stats.todaysDevisTotal || 0).toFixed(2)}</Text>
+            <Text style={styles.dailyLabel}>Devis aujourd'hui</Text>
+          </View>
+          <View style={[styles.dailyCard, { borderLeftColor: '#8b5cf6' }]}>
+            <Text style={styles.dailyValue}>{(stats.todaysInvoicesTotal || 0).toFixed(2)}</Text>
+            <Text style={styles.dailyLabel}>Factures aujourd'hui</Text>
+          </View>
+          <View style={[styles.dailyCard, { borderLeftColor: '#22c55e' }]}>
+            <Text style={styles.dailyValue}>{(stats.todaysPaymentsTotal || 0).toFixed(2)}</Text>
+            <Text style={styles.dailyLabel}>Paiements aujourd'hui</Text>
+          </View>
+        </View>
+
         {/* Financial Stats */}
         <View style={styles.financialRow}>
           <View style={[styles.financialCard, styles.revenueCard]}>
@@ -156,15 +172,6 @@ export function AdminDashboardScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('AdminSettings')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#6b728020' }]}>
-              <Ionicons name="settings" size={22} color="#6b7280" />
-            </View>
-            <Text style={styles.quickActionText}>Paramètres</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickAction}
             onPress={() => navigation.navigate('AdminFinance')}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: '#10b98120' }]}>
@@ -205,6 +212,28 @@ export function AdminDashboardScreen() {
             <Text style={styles.statLabel}>Factures</Text>
           </View>
         </View>
+
+        {/* Unpaid Clients Warning */}
+        {stats.unpaidClients && stats.unpaidClients.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.unpaidHeader}>
+              <Ionicons name="warning" size={20} color="#f59e0b" />
+              <Text style={styles.unpaidTitle}>Clients avec solde impayé ({stats.unpaidClients.length})</Text>
+            </View>
+            {stats.unpaidClients.map((c) => (
+              <View key={c.clientId} style={styles.unpaidCard}>
+                <Text style={styles.unpaidClientName}>{c.clientName}</Text>
+                <View style={styles.unpaidRow}>
+                  <Text style={styles.unpaidLabel}>Total: <Text style={{ fontWeight: '600' }}>{c.totalAmount.toFixed(3)} TND</Text></Text>
+                  <Text style={styles.unpaidLabel}>Payé: <Text style={{ fontWeight: '600', color: '#22c55e' }}>{c.totalPaid.toFixed(3)}</Text></Text>
+                </View>
+                <View style={styles.unpaidRemaining}>
+                  <Text style={styles.unpaidRemainingText}>Reste: {c.remaining.toFixed(3)} TND</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Devis Status */}
         <View style={styles.section}>
@@ -271,6 +300,13 @@ const styles = StyleSheet.create({
     flex: 1, paddingHorizontal: 20,
     width: '100%', maxWidth: 600, alignSelf: 'center',
   },
+  dailyRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  dailyCard: {
+    flex: 1, backgroundColor: colors.background.surface, padding: 12, borderRadius: 12,
+    borderLeftWidth: 3, borderWidth: 1, borderColor: colors.border.subtle,
+  },
+  dailyValue: { fontSize: 16, fontWeight: '700', color: colors.text.primary },
+  dailyLabel: { fontSize: 10, color: colors.text.muted, marginTop: 4 },
   financialRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   financialCard: {
     flex: 1, padding: 16, borderRadius: 16, alignItems: 'center',
@@ -325,4 +361,15 @@ const styles = StyleSheet.create({
   devisDate: { fontSize: 12, color: colors.text.muted },
   emptyState: { alignItems: 'center', padding: 24 },
   emptyText: { fontSize: 14, color: colors.text.muted },
+  unpaidHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  unpaidTitle: { fontSize: 16, fontWeight: '600', color: '#f59e0b' },
+  unpaidCard: {
+    backgroundColor: colors.background.surface, padding: 14, borderRadius: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: '#f59e0b40', borderLeftWidth: 3, borderLeftColor: '#f59e0b',
+  },
+  unpaidClientName: { fontSize: 15, fontWeight: '600', color: colors.text.primary, marginBottom: 6 },
+  unpaidRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  unpaidLabel: { fontSize: 13, color: colors.text.muted },
+  unpaidRemaining: { backgroundColor: '#ef444415', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8, alignSelf: 'flex-start' },
+  unpaidRemainingText: { fontSize: 13, fontWeight: '700', color: '#ef4444' },
 });

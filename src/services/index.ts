@@ -23,6 +23,8 @@ import {
   CreatePaymentInput,
   FinancialStats,
   FinancialClosure,
+  CaisseDevis,
+  CreateCaissePaymentData,
 } from '../types';
 
 // Auth
@@ -258,6 +260,18 @@ export const financialApi = {
   },
   getHistory: async (): Promise<FinancialClosure[]> => {
     const res = await api.get<FinancialClosure[]>('/financial/history');
+    return res.data;
+  },
+  getCaisseDevis: async (): Promise<CaisseDevis[]> => {
+    const res = await api.get<ApiResponse<CaisseDevis[]>>('/financial/caisse');
+    return res.data.data!;
+  },
+  createCaissePayment: async (data: CreateCaissePaymentData) => {
+    const res = await api.post<ApiResponse<any>>('/payments/caisse', data);
+    return res.data.data!;
+  },
+  createClosure: async (notes?: string): Promise<FinancialClosure> => {
+    const res = await api.post('/financial/close', { notes });
     return res.data;
   },
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ export function ClientSelectScreen({ navigation }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const lastCreatedDevisId = useRef<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<CreateClientInput>({
@@ -43,6 +44,11 @@ export function ClientSelectScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      // Clean up abandoned draft devis when returning to this screen
+      if (lastCreatedDevisId.current) {
+        devisApi.delete(lastCreatedDevisId.current).catch(() => {});
+        lastCreatedDevisId.current = null;
+      }
       fetchClients();
     }, [])
   );
@@ -104,6 +110,7 @@ export function ClientSelectScreen({ navigation }: Props) {
     setCreating(true);
     try {
       const devis = await devisApi.create({ clientId: client.id });
+      lastCreatedDevisId.current = devis.id;
       navigation.navigate('MachineSelect', { clientId: client.id, devisId: devis.id });
     } catch (error) {
       console.error(error);
@@ -151,9 +158,6 @@ export function ClientSelectScreen({ navigation }: Props) {
           placeholderTextColor={colors.text.muted}
           onChangeText={setSearchQuery}
         />
-        <TouchableOpacity style={styles.addButton} onPress={openModal}>
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {creating && (

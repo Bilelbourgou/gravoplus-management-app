@@ -216,11 +216,13 @@ export function MainNavigator() {
         component={NewDevisNavigator}
         options={{ tabBarLabel: 'Nouveau devis' }}
       />
-      <Tab.Screen
-        name="HistoryTab"
-        component={HistoryNavigator}
-        options={{ tabBarLabel: 'Historique' }}
-      />
+      {isAdmin && (
+        <Tab.Screen
+          name="HistoryTab"
+          component={HistoryNavigator}
+          options={{ tabBarLabel: 'Historique' }}
+        />
+      )}
       {isAdmin && (
         <Tab.Screen
           name="AdminTab"

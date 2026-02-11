@@ -46,7 +46,7 @@ export function AdminSettingsScreen() {
   const fetchData = async () => {
     try {
       const [pricingData, materialsData, servicesData] = await Promise.all([
-        machinesApi.getAll(),
+        machinesApi.getPricing(),
         materialsApi.getAll(),
         servicesApi.getAll(),
       ]);

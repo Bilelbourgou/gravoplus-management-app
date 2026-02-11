@@ -12,24 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { PaymentModal } from '../../components/PaymentModal';
 import { invoicesApi, devisApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { InvoiceFull, Devis } from '../../types';
-
-type InvoiceStatus = 'PENDING' | 'PARTIAL' | 'PAID';
-
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  PENDING: 'En attente',
-  PARTIAL: 'Partiel',
-  PAID: 'Payé',
-};
-
-const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  PENDING: '#f97316',
-  PARTIAL: '#3b82f6',
-  PAID: '#22c55e',
-};
 
 export function AdminInvoicesScreen() {
   const [invoices, setInvoices] = useState<InvoiceFull[]>([]);
@@ -39,7 +24,6 @@ export function AdminInvoicesScreen() {
   const [validatedDevis, setValidatedDevis] = useState<Devis[]>([]);
   const [selectedDevisIds, setSelectedDevisIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
-  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceFull | null>(null);
 
   const fetchInvoices = async () => {
     try {
@@ -104,69 +88,19 @@ export function AdminInvoicesScreen() {
     }
   };
 
-  const getStatusColor = (status: string): string => {
-    return STATUS_COLORS[status as InvoiceStatus] || colors.text.muted;
-  };
-
   const renderItem = ({ item }: { item: InvoiceFull }) => {
-    const status = item.status as InvoiceStatus;
-    const paidPercentage = item.totalAmount > 0
-      ? Math.round((Number(item.paidAmount || 0) / Number(item.totalAmount)) * 100)
-      : 0;
-
     return (
       <View style={styles.invoiceCard}>
         <View style={styles.invoiceHeader}>
           <Text style={styles.invoiceReference}>{item.reference}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) + '20' }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(status) }]}>
-              {STATUS_LABELS[status] || status}
-            </Text>
-          </View>
+          <Text style={styles.invoiceAmount}>{Number(item.totalAmount || 0).toFixed(3)} TND</Text>
         </View>
 
         <Text style={styles.clientName}>{item.client?.name || 'Client inconnu'}</Text>
 
-        <View style={styles.amountRow}>
-          <View>
-            <Text style={styles.amountLabel}>Total</Text>
-            <Text style={styles.amountValue}>{Number(item.totalAmount || 0).toFixed(2)} TND</Text>
-          </View>
-          <View style={styles.amountDivider} />
-          <View>
-            <Text style={styles.amountLabel}>Payé</Text>
-            <Text style={[styles.amountValue, { color: '#22c55e' }]}>
-              {Number(item.paidAmount || 0).toFixed(2)} TND
-            </Text>
-          </View>
-          <View style={styles.amountDivider} />
-          <View>
-            <Text style={styles.amountLabel}>Reste</Text>
-            <Text style={[styles.amountValue, { color: '#ef4444' }]}>
-              {(Number(item.totalAmount || 0) - Number(item.paidAmount || 0)).toFixed(2)} TND
-            </Text>
-          </View>
-        </View>
-
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${paidPercentage}%` }]} />
-          </View>
-          <Text style={styles.progressText}>{paidPercentage}%</Text>
-        </View>
-
         <Text style={styles.date}>
           {new Date(item.createdAt).toLocaleDateString('fr-FR')}
         </Text>
-
-        <TouchableOpacity 
-          style={styles.paymentButton}
-          onPress={() => setSelectedInvoiceForPayment(item)}
-        >
-          <Ionicons name="card-outline" size={16} color="#fff" />
-          <Text style={styles.paymentButtonText}>Gérer les paiements</Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -207,18 +141,6 @@ export function AdminInvoicesScreen() {
           </View>
         }
       />
-
-      {selectedInvoiceForPayment && (
-        <PaymentModal
-          visible={!!selectedInvoiceForPayment}
-          invoiceId={selectedInvoiceForPayment.id}
-          invoiceReference={selectedInvoiceForPayment.reference}
-          onClose={() => setSelectedInvoiceForPayment(null)}
-          onSuccess={() => {
-            fetchInvoices();
-          }}
-        />
-      )}
 
       {/* Create Invoice Modal */}
       <Modal visible={createModalVisible} animationType="slide" transparent>
@@ -330,17 +252,8 @@ const styles = StyleSheet.create({
   },
   invoiceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   invoiceReference: { fontSize: 16, fontWeight: '600', color: colors.text.primary },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  statusText: { fontSize: 12, fontWeight: '600' },
-  clientName: { fontSize: 14, color: colors.text.secondary, marginBottom: 16 },
-  amountRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  amountLabel: { fontSize: 11, color: colors.text.muted, marginBottom: 4 },
-  amountValue: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
-  amountDivider: { width: 1, backgroundColor: colors.border.subtle },
-  progressContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  progressBar: { flex: 1, height: 6, backgroundColor: colors.background.elevated, borderRadius: 3 },
-  progressFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  progressText: { fontSize: 12, fontWeight: '600', color: colors.text.muted, width: 40 },
+  invoiceAmount: { fontSize: 15, fontWeight: '600', color: colors.primary[500] },
+  clientName: { fontSize: 14, color: colors.text.secondary, marginBottom: 8 },
   date: { fontSize: 12, color: colors.text.muted },
   emptyState: { alignItems: 'center', paddingTop: 64 },
   emptyText: { fontSize: 16, color: colors.text.muted, marginTop: 16 },
@@ -395,19 +308,4 @@ const styles = StyleSheet.create({
   },
   createButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   buttonDisabled: { opacity: 0.7 },
-  paymentButton: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary[500],
-    padding: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  paymentButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
 });

@@ -17,9 +17,9 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { clientsApi, invoicesApi, DirectInvoiceItem } from '../../services';
+import { clientsApi, invoicesApi, financialApi } from '../../services';
 import { colors } from '../../theme/colors';
-import type { Client, CreateClientInput, ClientBalanceData } from '../../types';
+import type { Client, CreateClientInput, ClientBalanceData, ClientBalanceDevis, CreateCaissePaymentData } from '../../types';
 
 export function AdminClientsScreen() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -33,15 +33,18 @@ export function AdminClientsScreen() {
   const [balanceData, setBalanceData] = useState<ClientBalanceData | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [selectedClientForInvoice, setSelectedClientForInvoice] = useState<Client | null>(null);
-  
+
+  // Devis-based payment state
+  const [expandedDevisId, setExpandedDevisId] = useState<string | null>(null);
+  const [paymentDevis, setPaymentDevis] = useState<ClientBalanceDevis | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Espèces');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
   // Invoice from devis state
-  const [devisInvoiceModalVisible, setDevisInvoiceModalVisible] = useState(false);
-  const [selectedDevisIds, setSelectedDevisIds] = useState<string[]>([]);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
-  
-  // Direct invoice state
-  const [directInvoiceModalVisible, setDirectInvoiceModalVisible] = useState(false);
-  const [directInvoiceItems, setDirectInvoiceItems] = useState<DirectInvoiceItem[]>([{ description: '', quantity: 1, unitPrice: 0 }]);
 
   const [formData, setFormData] = useState<CreateClientInput>({
     name: '',
@@ -157,91 +160,70 @@ export function AdminClientsScreen() {
     }
   };
 
-  const openDevisInvoiceModal = () => {
-    setBalanceModalVisible(false);
-    setSelectedDevisIds([]);
-    setTimeout(() => setDevisInvoiceModalVisible(true), 100);
+  const resetPaymentForm = () => {
+    setPaymentDevis(null);
+    setPaymentAmount('');
+    setPaymentMethod('Espèces');
+    setPaymentReference('');
+    setPaymentNotes('');
   };
 
-  const toggleDevisSelection = (devisId: string) => {
-    if (selectedDevisIds.includes(devisId)) {
-      setSelectedDevisIds(selectedDevisIds.filter((id) => id !== devisId));
-    } else {
-      setSelectedDevisIds([...selectedDevisIds, devisId]);
-    }
-  };
-
-  const handleCreateInvoiceFromDevis = async () => {
-    if (selectedDevisIds.length === 0) {
-      Alert.alert('Erreur', 'Sélectionnez au moins un devis');
+  const handleAddPayment = async () => {
+    if (!paymentDevis) return;
+    const amount = parseFloat(paymentAmount);
+    if (!amount || amount <= 0) {
+      Alert.alert('Erreur', 'Montant invalide');
       return;
     }
-    setCreatingInvoice(true);
+    if (amount > paymentDevis.remaining) {
+      Alert.alert('Erreur', `Le montant dépasse le reste à payer (${paymentDevis.remaining.toFixed(3)} TND)`);
+      return;
+    }
+    setPaymentLoading(true);
     try {
-      await invoicesApi.createFromDevis(selectedDevisIds);
-      setDevisInvoiceModalVisible(false);
-      setBalanceModalVisible(false);
-      Alert.alert('Succès', 'Facture créée avec succès');
-      // Refresh balance if needed
+      await financialApi.createCaissePayment({
+        amount,
+        devisId: paymentDevis.id,
+        paymentMethod,
+        reference: paymentReference || undefined,
+        notes: paymentNotes || undefined,
+        description: `Paiement pour devis ${paymentDevis.reference}`,
+      });
+      resetPaymentForm();
+      Alert.alert('Succès', 'Paiement enregistré');
       if (selectedClientForInvoice) {
-        openBalanceModal(selectedClientForInvoice);
+        const data = await clientsApi.getBalance(selectedClientForInvoice.id);
+        setBalanceData(data);
       }
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer la facture');
+    } catch (error: any) {
+      Alert.alert('Erreur', error?.response?.data?.message || 'Impossible d\'enregistrer le paiement');
     } finally {
-      setCreatingInvoice(false);
+      setPaymentLoading(false);
     }
   };
 
-  const openDirectInvoiceModal = () => {
-    setBalanceModalVisible(false);
-    setDirectInvoiceItems([{ description: '', quantity: 1, unitPrice: 0 }]);
-    setTimeout(() => setDirectInvoiceModalVisible(true), 100);
-  };
-
-  const addDirectInvoiceItem = () => {
-    setDirectInvoiceItems([...directInvoiceItems, { description: '', quantity: 1, unitPrice: 0 }]);
-  };
-
-  const removeDirectInvoiceItem = (index: number) => {
-    if (directInvoiceItems.length > 1) {
-      setDirectInvoiceItems(directInvoiceItems.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateDirectInvoiceItem = (index: number, field: keyof DirectInvoiceItem, value: string | number) => {
-    const updated = [...directInvoiceItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setDirectInvoiceItems(updated);
-  };
-
-  const handleCreateDirectInvoice = async () => {
-    const validItems = directInvoiceItems.filter((item) => item.description.trim() && item.quantity > 0 && item.unitPrice > 0);
-    if (validItems.length === 0) {
-      Alert.alert('Erreur', 'Ajoutez au moins un article valide');
-      return;
-    }
-    if (!selectedClientForInvoice) {
-      Alert.alert('Erreur', 'Client non sélectionné');
-      return;
-    }
-    setCreatingInvoice(true);
-    try {
-      await invoicesApi.createDirect(selectedClientForInvoice.id, validItems);
-      setDirectInvoiceModalVisible(false);
-      setBalanceModalVisible(false);
-      Alert.alert('Succès', 'Facture créée avec succès');
-      // Refresh balance
-      openBalanceModal(selectedClientForInvoice);
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer la facture');
-    } finally {
-      setCreatingInvoice(false);
-    }
-  };
-
-  const getDirectInvoiceTotal = () => {
-    return directInvoiceItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const handleInvoiceDevis = async (devisId: string) => {
+    Alert.alert('Facturer', 'Créer une facture pour ce devis ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Facturer',
+        onPress: async () => {
+          setCreatingInvoice(true);
+          try {
+            await invoicesApi.createFromDevis([devisId]);
+            Alert.alert('Succès', 'Facture créée avec succès');
+            if (selectedClientForInvoice) {
+              const data = await clientsApi.getBalance(selectedClientForInvoice.id);
+              setBalanceData(data);
+            }
+          } catch (error: any) {
+            Alert.alert('Erreur', error?.response?.data?.message || 'Impossible de créer la facture');
+          } finally {
+            setCreatingInvoice(false);
+          }
+        },
+      },
+    ]);
   };
 
   const renderItem = ({ item }: { item: Client }) => (
@@ -427,15 +409,27 @@ export function AdminClientsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Balance Modal */}
+      {/* Balance Modal - Devis-based */}
       <Modal visible={balanceModalVisible} animationType="slide" transparent>
-        <View style={styles.balanceModalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.balanceModalOverlay}
+        >
           <View style={styles.balanceModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Solde - {balanceData?.client?.name || ''}
-              </Text>
-              <TouchableOpacity onPress={() => setBalanceModalVisible(false)}>
+              {paymentDevis ? (
+                <>
+                  <TouchableOpacity onPress={resetPaymentForm} style={{ marginRight: 10 }}>
+                    <Ionicons name="arrow-back" size={22} color={colors.text.primary} />
+                  </TouchableOpacity>
+                  <Text style={[styles.modalTitle, { flex: 1 }]}>Paiement — {paymentDevis.reference}</Text>
+                </>
+              ) : (
+                <Text style={styles.modalTitle}>
+                  Solde - {selectedClientForInvoice?.name || ''}
+                </Text>
+              )}
+              <TouchableOpacity onPress={() => { setBalanceModalVisible(false); resetPaymentForm(); setExpandedDevisId(null); }}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
@@ -444,16 +438,135 @@ export function AdminClientsScreen() {
               <View style={styles.balanceLoading}>
                 <ActivityIndicator size="large" color={colors.primary[500]} />
               </View>
+            ) : paymentDevis ? (
+              /* ── Inline Payment Form ── */
+              <>
+                <ScrollView style={styles.balanceBody} keyboardShouldPersistTaps="handled">
+                  {/* Payment summary */}
+                  <View style={styles.paymentSummaryCard}>
+                    <View style={styles.paymentSummaryItem}>
+                      <Text style={styles.paymentSummaryLabel}>Montant total</Text>
+                      <Text style={styles.paymentSummaryValue}>{Number(paymentDevis.totalAmount).toFixed(3)} TND</Text>
+                    </View>
+                    <View style={styles.paymentSummaryItem}>
+                      <Text style={styles.paymentSummaryLabel}>Déjà payé</Text>
+                      <Text style={[styles.paymentSummaryValue, { color: '#22c55e' }]}>{Number(paymentDevis.paidAmount).toFixed(3)} TND</Text>
+                    </View>
+                    <View style={[styles.paymentSummaryItem, styles.paymentSummaryTotal]}>
+                      <Text style={[styles.paymentSummaryLabel, { fontWeight: '600' }]}>Reste à payer</Text>
+                      <Text style={[styles.paymentSummaryValue, { color: '#ef4444', fontSize: 18 }]}>{Number(paymentDevis.remaining).toFixed(3)} TND</Text>
+                    </View>
+                  </View>
+
+                  {/* Payment history */}
+                  {(paymentDevis.payments || []).length > 0 && (
+                    <View style={styles.paymentHistorySection}>
+                      <Text style={styles.expandedTitle}>Historique des paiements</Text>
+                      {(paymentDevis.payments || []).map((p) => (
+                        <View key={p.id} style={styles.expandedRow}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.expandedRowText}>
+                              {p.paymentMethod || 'Espèces'} — {new Date(p.paymentDate).toLocaleDateString('fr-FR')}
+                            </Text>
+                            {p.createdBy && (
+                              <Text style={{ fontSize: 11, color: colors.text.muted }}>
+                                par {p.createdBy.firstName} {p.createdBy.lastName}
+                              </Text>
+                            )}
+                          </View>
+                          <Text style={[styles.expandedRowAmount, { color: '#22c55e' }]}>+{Number(p.amount).toFixed(3)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Amount */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Montant * <Text style={{ fontWeight: '400', color: colors.text.muted }}>(max: {Number(paymentDevis.remaining).toFixed(3)} TND)</Text></Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0.000"
+                      placeholderTextColor={colors.text.muted}
+                      keyboardType="decimal-pad"
+                      value={paymentAmount}
+                      onChangeText={setPaymentAmount}
+                    />
+                    {parseFloat(paymentAmount) > paymentDevis.remaining && (
+                      <Text style={styles.formError}>Le montant dépasse le reste à payer ({Number(paymentDevis.remaining).toFixed(3)} TND)</Text>
+                    )}
+                  </View>
+
+                  {/* Method */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Mode de paiement</Text>
+                    <View style={styles.methodRow}>
+                      {['Espèces', 'Chèque', 'Virement'].map((m) => (
+                        <TouchableOpacity
+                          key={m}
+                          style={[styles.methodChip, paymentMethod === m && styles.methodChipActive]}
+                          onPress={() => setPaymentMethod(m)}
+                        >
+                          <Text style={[styles.methodChipText, paymentMethod === m && styles.methodChipTextActive]}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Reference */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Référence</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="N° chèque, réf. virement..."
+                      placeholderTextColor={colors.text.muted}
+                      value={paymentReference}
+                      onChangeText={setPaymentReference}
+                    />
+                  </View>
+
+                  {/* Notes */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Notes</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Notes..."
+                      placeholderTextColor={colors.text.muted}
+                      value={paymentNotes}
+                      onChangeText={setPaymentNotes}
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={resetPaymentForm}>
+                    <Text style={styles.cancelButtonText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveButton, (paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) > paymentDevis.remaining) && styles.buttonDisabled]}
+                    onPress={handleAddPayment}
+                    disabled={paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > paymentDevis.remaining}
+                  >
+                    {paymentLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Enregistrer</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
             ) : balanceData ? (
+              /* ── Devis List View ── */
               <ScrollView style={styles.balanceBody}>
                 {/* Summary Cards */}
                 <View style={styles.summaryGrid}>
                   <View style={[styles.summaryCard, styles.invoicedCard]}>
-                    <Ionicons name="receipt" size={20} color="#3b82f6" />
+                    <Ionicons name="document-text" size={20} color="#3b82f6" />
                     <Text style={styles.summaryValue}>
-                      {Number(balanceData.summary.totalInvoiced || 0).toFixed(2)}
+                      {Number(balanceData.summary.totalDevisAmount || 0).toFixed(2)}
                     </Text>
-                    <Text style={styles.summaryLabel}>Facturé</Text>
+                    <Text style={styles.summaryLabel}>Total Devis</Text>
                   </View>
                   <View style={[styles.summaryCard, styles.paidCard]}>
                     <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
@@ -470,7 +583,7 @@ export function AdminClientsScreen() {
                   balanceData.summary.outstandingBalance > 0 ? styles.outstandingPositive : styles.outstandingZero
                 ]}>
                   <View style={styles.outstandingInfo}>
-                    <Text style={styles.outstandingLabel}>Solde à payer</Text>
+                    <Text style={styles.outstandingLabel}>Reste à payer</Text>
                     <Text style={[
                       styles.outstandingValue,
                       { color: balanceData.summary.outstandingBalance > 0 ? '#ef4444' : '#22c55e' }
@@ -485,287 +598,150 @@ export function AdminClientsScreen() {
                   />
                 </View>
 
-                {/* Pending Devis */}
-                {balanceData.summary.pendingDevisCount > 0 && (
-                  <View style={styles.pendingSection}>
-                    <Text style={styles.sectionTitle}>
-                      Devis en attente ({balanceData.summary.pendingDevisCount})
-                    </Text>
-                    <Text style={styles.pendingTotal}>
-                      Total: {Number(balanceData.summary.pendingDevisTotal || 0).toFixed(2)} TND
-                    </Text>
-                    {balanceData.pendingDevis.map((devis) => (
-                      <View key={devis.id} style={styles.devisItem}>
-                        <View>
-                          <Text style={styles.devisRef}>{devis.reference}</Text>
-                          <Text style={styles.devisDate}>
-                            {new Date(devis.createdAt).toLocaleDateString('fr-FR')}
-                          </Text>
-                        </View>
-                        <Text style={styles.devisAmount}>
-                          {Number(devis.totalAmount || 0).toFixed(2)} TND
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {/* Devis List */}
+                <Text style={styles.sectionTitle}>
+                  Devis ({balanceData.summary.devisCount})
+                </Text>
 
-                {/* Invoices */}
-                {balanceData.invoices.length > 0 && (
-                  <View style={styles.invoicesSection}>
-                    <Text style={styles.sectionTitle}>
-                      Factures ({balanceData.invoices.length})
-                    </Text>
-                    {balanceData.invoices.map((invoice) => (
-                      <View key={invoice.id} style={styles.invoiceItem}>
-                        <View style={styles.invoiceHeader}>
-                          <Text style={styles.invoiceRef}>{invoice.reference}</Text>
-                          <View style={[
-                            styles.invoiceStatusBadge,
-                            { backgroundColor: invoice.balance > 0 ? '#ef444420' : '#22c55e20' }
-                          ]}>
-                            <Text style={[
-                              styles.invoiceStatusText,
-                              { color: invoice.balance > 0 ? '#ef4444' : '#22c55e' }
-                            ]}>
-                              {invoice.balance > 0 ? 'À payer' : 'Payé'}
+                {balanceData.devis.map((devis) => {
+                  const isExpanded = expandedDevisId === devis.id;
+                  const statusColor = devis.status === 'INVOICED' ? '#22c55e' : devis.status === 'VALIDATED' ? '#3b82f6' : '#f97316';
+                  const statusLabel = devis.status === 'INVOICED' ? 'Facturé' : devis.status === 'VALIDATED' ? 'Validé' : 'Brouillon';
+
+                  return (
+                    <View key={devis.id} style={styles.devisCardItem}>
+                      <TouchableOpacity
+                        style={styles.devisCardHeader}
+                        onPress={() => setExpandedDevisId(isExpanded ? null : devis.id)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.devisRef}>{devis.reference}</Text>
+                            <View style={[styles.devisStatusBadge, { backgroundColor: statusColor + '20' }]}>
+                              <Text style={[styles.devisStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                            <Text style={styles.devisDate}>
+                              {new Date(devis.createdAt).toLocaleDateString('fr-FR')}
+                            </Text>
+                            <Text style={styles.devisAmount}>
+                              {Number(devis.totalAmount).toFixed(2)} TND
+                            </Text>
+                          </View>
+                          {/* Payment progress */}
+                          <View style={styles.devisProgress}>
+                            <View style={styles.devisProgressBar}>
+                              <View style={[styles.devisProgressFill, { width: `${devis.totalAmount > 0 ? Math.min(100, (devis.paidAmount / devis.totalAmount) * 100) : 0}%` }]} />
+                            </View>
+                            <Text style={styles.devisProgressText}>
+                              {Number(devis.paidAmount).toFixed(2)} / {Number(devis.totalAmount).toFixed(2)}
                             </Text>
                           </View>
                         </View>
-                        <View style={styles.invoiceDetails}>
-                          <View style={styles.invoiceAmounts}>
-                            <Text style={styles.invoiceAmountLabel}>Total:</Text>
-                            <Text style={styles.invoiceAmountValue}>
-                              {Number(invoice.totalAmount || 0).toFixed(2)} TND
-                            </Text>
+                        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.text.muted} />
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View style={styles.devisExpanded}>
+                          {/* Lines */}
+                          {(devis.lines || []).length > 0 && (
+                            <View style={styles.expandedSection}>
+                              <Text style={styles.expandedTitle}>Lignes</Text>
+                              {(devis.lines || []).map((line) => (
+                                <View key={line.id} style={styles.expandedRow}>
+                                  <Text style={styles.expandedRowText} numberOfLines={1}>
+                                    {line.description || line.machineType}
+                                    {line.material ? ` (${line.material.name})` : ''}
+                                  </Text>
+                                  <Text style={styles.expandedRowAmount}>{Number(line.lineTotal).toFixed(2)}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+
+                          {/* Services */}
+                          {(devis.services || []).length > 0 && (
+                            <View style={styles.expandedSection}>
+                              <Text style={styles.expandedTitle}>Services</Text>
+                              {(devis.services || []).map((svc) => (
+                                <View key={svc.id} style={styles.expandedRow}>
+                                  <Text style={styles.expandedRowText}>{svc.service?.name || 'Service'}</Text>
+                                  <Text style={styles.expandedRowAmount}>{Number(svc.price).toFixed(2)}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+
+                          {/* Payments */}
+                          <View style={styles.expandedSection}>
+                            <Text style={styles.expandedTitle}>Paiements ({(devis.payments || []).length})</Text>
+                            {(devis.payments || []).length > 0 ? (devis.payments || []).map((p) => (
+                              <View key={p.id} style={styles.expandedRow}>
+                                <View>
+                                  <Text style={styles.expandedRowText}>
+                                    {p.paymentMethod || 'Espèces'} - {new Date(p.paymentDate).toLocaleDateString('fr-FR')}
+                                  </Text>
+                                  {p.createdBy && (
+                                    <Text style={{ fontSize: 11, color: colors.text.muted }}>
+                                      par {p.createdBy.firstName} {p.createdBy.lastName}
+                                    </Text>
+                                  )}
+                                </View>
+                                <Text style={[styles.expandedRowAmount, { color: '#22c55e' }]}>
+                                  +{Number(p.amount).toFixed(2)}
+                                </Text>
+                              </View>
+                            )) : (
+                              <Text style={{ fontSize: 13, color: colors.text.muted }}>Aucun paiement</Text>
+                            )}
                           </View>
-                          <View style={styles.invoiceAmounts}>
-                            <Text style={styles.invoiceAmountLabel}>Payé:</Text>
-                            <Text style={[styles.invoiceAmountValue, { color: '#22c55e' }]}>
-                              {Number(invoice.paidAmount || 0).toFixed(2)} TND
-                            </Text>
-                          </View>
-                          {invoice.balance > 0 && (
-                            <View style={styles.invoiceAmounts}>
-                              <Text style={styles.invoiceAmountLabel}>Reste:</Text>
-                              <Text style={[styles.invoiceAmountValue, { color: '#ef4444' }]}>
-                                {Number(invoice.balance || 0).toFixed(2)} TND
+
+                          {/* Invoice info */}
+                          {devis.invoice && (
+                            <View style={[styles.expandedSection, { backgroundColor: '#22c55e10', borderRadius: 8, padding: 10 }]}>
+                              <Text style={{ fontSize: 13, color: '#22c55e', fontWeight: '600' }}>
+                                Facturé: {devis.invoice.reference}
                               </Text>
                             </View>
                           )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
 
-                {balanceData.invoices.length === 0 && balanceData.pendingDevis.length === 0 && (
+                          {/* Actions */}
+                          <View style={styles.devisActions}>
+                            {!devis.isFullyPaid && devis.status !== 'INVOICED' && (
+                              <TouchableOpacity
+                                style={styles.devisActionBtn}
+                                onPress={() => { setPaymentDevis(devis); setPaymentAmount(String(devis.remaining.toFixed(3))); setPaymentMethod('Espèces'); setPaymentReference(''); setPaymentNotes(''); }}
+                              >
+                                <Ionicons name="card" size={16} color="#fff" />
+                                <Text style={styles.devisActionText}>Payer</Text>
+                              </TouchableOpacity>
+                            )}
+                            {devis.isFullyPaid && !devis.invoice && (
+                              <TouchableOpacity
+                                style={[styles.devisActionBtn, { backgroundColor: '#22c55e' }]}
+                                onPress={() => handleInvoiceDevis(devis.id)}
+                                disabled={creatingInvoice}
+                              >
+                                <Ionicons name="receipt" size={16} color="#fff" />
+                                <Text style={styles.devisActionText}>Facturer</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {balanceData.devis.length === 0 && (
                   <View style={styles.noDataState}>
                     <Ionicons name="document-outline" size={48} color={colors.text.muted} />
-                    <Text style={styles.noDataText}>Aucune facture ou devis</Text>
+                    <Text style={styles.noDataText}>Aucun devis</Text>
                   </View>
                 )}
-
-                {/* Invoice Actions - Now outside ScrollView for sticky footer */}
               </ScrollView>
             ) : null}
-
-            {balanceData && !loadingBalance && (
-              <View style={styles.invoiceActions}>
-                <Text style={styles.actionsTitle}>Créer une facture</Text>
-                <View style={styles.actionsRow}>
-                  {(balanceData.pendingDevis?.length || 0) > 0 && (
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => openDevisInvoiceModal()}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="document-text" size={20} color="#fff" />
-                      <Text style={styles.actionButtonText}>Depuis devis</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.directActionButton]}
-                    onPress={() => openDirectInvoiceModal()}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="add-circle" size={20} color="#fff" />
-                    <Text style={styles.actionButtonText}>Facture directe</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Invoice from Devis Modal */}
-      <Modal visible={devisInvoiceModalVisible} animationType="slide" transparent>
-        <View style={styles.balanceModalOverlay}>
-          <View style={styles.balanceModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Facturer des devis</Text>
-              <TouchableOpacity onPress={() => setDevisInvoiceModalVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.balanceBody}>
-              <Text style={styles.selectDevisHint}>Sélectionnez les devis à facturer</Text>
-              {balanceData?.pendingDevis.map((devis) => {
-                const isSelected = selectedDevisIds.includes(devis.id);
-                return (
-                  <TouchableOpacity
-                    key={devis.id}
-                    style={[styles.selectableDevisItem, isSelected && styles.selectedDevisItem]}
-                    onPress={() => toggleDevisSelection(devis.id)}
-                  >
-                    <View style={styles.devisItemInfo}>
-                      <Text style={styles.devisRef}>{devis.reference}</Text>
-                      <Text style={styles.devisDate}>
-                        {new Date(devis.createdAt).toLocaleDateString('fr-FR')}
-                      </Text>
-                    </View>
-                    <View style={styles.devisItemRight}>
-                      <Text style={styles.devisAmount}>
-                        {Number(devis.totalAmount || 0).toFixed(2)} TND
-                      </Text>
-                      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                        {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {selectedDevisIds.length > 0 && (
-                <View style={styles.selectedTotal}>
-                  <Text style={styles.selectedTotalLabel}>
-                    {selectedDevisIds.length} devis sélectionné(s)
-                  </Text>
-                  <Text style={styles.selectedTotalValue}>
-                    {balanceData?.pendingDevis
-                      .filter((d) => selectedDevisIds.includes(d.id))
-                      .reduce((sum, d) => sum + Number(d.totalAmount || 0), 0)
-                      .toFixed(2)} TND
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setDevisInvoiceModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, (creatingInvoice || selectedDevisIds.length === 0) && styles.buttonDisabled]}
-                onPress={handleCreateInvoiceFromDevis}
-                disabled={creatingInvoice || selectedDevisIds.length === 0}
-              >
-                {creatingInvoice ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Créer la facture</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Direct Invoice Modal */}
-      <Modal visible={directInvoiceModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.balanceModalOverlay}
-        >
-          <View style={styles.balanceModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Facture directe</Text>
-              <TouchableOpacity onPress={() => setDirectInvoiceModalVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.balanceBody}>
-              <Text style={styles.clientNameLabel}>
-                Client: {selectedClientForInvoice?.name}
-              </Text>
-
-              {directInvoiceItems.map((item, index) => (
-                <View key={index} style={styles.directInvoiceItemCard}>
-                  <View style={styles.directItemHeader}>
-                    <Text style={styles.directItemTitle}>Article {index + 1}</Text>
-                    {directInvoiceItems.length > 1 && (
-                      <TouchableOpacity onPress={() => removeDirectInvoiceItem(index)}>
-                        <Ionicons name="trash-outline" size={18} color={colors.error[500]} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <TextInput
-                    style={styles.directInput}
-                    placeholder="Description"
-                    placeholderTextColor={colors.text.muted}
-                    value={item.description}
-                    onChangeText={(text) => updateDirectInvoiceItem(index, 'description', text)}
-                  />
-                  <View style={styles.directInputRow}>
-                    <View style={styles.directInputHalf}>
-                      <Text style={styles.directInputLabel}>Quantité</Text>
-                      <TextInput
-                        style={styles.directInput}
-                        placeholder="1"
-                        placeholderTextColor={colors.text.muted}
-                        keyboardType="numeric"
-                        value={item.quantity > 0 ? String(item.quantity) : ''}
-                        onChangeText={(text) => updateDirectInvoiceItem(index, 'quantity', parseInt(text) || 0)}
-                      />
-                    </View>
-                    <View style={styles.directInputHalf}>
-                      <Text style={styles.directInputLabel}>Prix unitaire (TND)</Text>
-                      <TextInput
-                        style={styles.directInput}
-                        placeholder="0.00"
-                        placeholderTextColor={colors.text.muted}
-                        keyboardType="decimal-pad"
-                        value={item.unitPrice > 0 ? String(item.unitPrice) : ''}
-                        onChangeText={(text) => updateDirectInvoiceItem(index, 'unitPrice', parseFloat(text) || 0)}
-                      />
-                    </View>
-                  </View>
-                  <Text style={styles.directItemSubtotal}>
-                    Sous-total: {(item.quantity * item.unitPrice).toFixed(2)} TND
-                  </Text>
-                </View>
-              ))}
-
-              <TouchableOpacity style={styles.addItemButton} onPress={addDirectInvoiceItem}>
-                <Ionicons name="add" size={20} color={colors.primary[500]} />
-                <Text style={styles.addItemButtonText}>Ajouter un article</Text>
-              </TouchableOpacity>
-
-              <View style={styles.directInvoiceTotal}>
-                <Text style={styles.directTotalLabel}>Total facture</Text>
-                <Text style={styles.directTotalValue}>{getDirectInvoiceTotal().toFixed(2)} TND</Text>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setDirectInvoiceModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, creatingInvoice && styles.buttonDisabled]}
-                onPress={handleCreateDirectInvoice}
-                disabled={creatingInvoice}
-              >
-                {creatingInvoice ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Créer la facture</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -876,90 +852,61 @@ const styles = StyleSheet.create({
   outstandingInfo: { flex: 1 },
   outstandingLabel: { fontSize: 14, color: colors.text.muted },
   outstandingValue: { fontSize: 28, fontWeight: '700', marginTop: 4 },
-  pendingSection: { marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary, marginBottom: 12 },
-  pendingTotal: { fontSize: 14, color: colors.text.muted, marginBottom: 12 },
-  devisItem: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.background.elevated, padding: 14, borderRadius: 10, marginBottom: 8,
-  },
   devisRef: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
   devisDate: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
   devisAmount: { fontSize: 15, fontWeight: '600', color: colors.primary[500] },
-  invoicesSection: { marginBottom: 20 },
-  invoiceItem: {
-    backgroundColor: colors.background.elevated, padding: 14, borderRadius: 10, marginBottom: 10,
-  },
-  invoiceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  invoiceRef: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
-  invoiceStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  invoiceStatusText: { fontSize: 12, fontWeight: '600' },
-  invoiceDetails: { gap: 6 },
-  invoiceAmounts: { flexDirection: 'row', justifyContent: 'space-between' },
-  invoiceAmountLabel: { fontSize: 13, color: colors.text.muted },
-  invoiceAmountValue: { fontSize: 13, fontWeight: '600', color: colors.text.primary },
   noDataState: { alignItems: 'center', padding: 40 },
   noDataText: { fontSize: 14, color: colors.text.muted, marginTop: 12 },
-  // Invoice actions styles
-  // Invoice actions styles
-  invoiceActions: {
-    padding: 20, borderTopWidth: 1, borderTopColor: colors.border.subtle,
-    backgroundColor: colors.background.base,
+  // Devis card styles
+  devisCardItem: {
+    backgroundColor: colors.background.elevated, borderRadius: 12, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border.subtle, overflow: 'hidden',
   },
-  actionsTitle: { fontSize: 16, fontWeight: '600', color: colors.text.primary, marginBottom: 12 },
-  actionsRow: { flexDirection: 'row', gap: 12 },
-  actionButton: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.primary[500], padding: 14, borderRadius: 10,
+  devisCardHeader: {
+    flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10,
   },
-  directActionButton: { backgroundColor: '#22c55e' },
-  actionButtonText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  // Devis selection styles
-  selectDevisHint: { fontSize: 14, color: colors.text.muted, marginBottom: 16 },
-  selectableDevisItem: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.background.elevated, padding: 14, borderRadius: 10, marginBottom: 10,
-    borderWidth: 2, borderColor: 'transparent',
+  devisStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  devisStatusText: { fontSize: 11, fontWeight: '600' },
+  devisProgress: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  devisProgressBar: { flex: 1, height: 5, backgroundColor: colors.background.base, borderRadius: 3 },
+  devisProgressFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
+  devisProgressText: { fontSize: 11, color: colors.text.muted },
+  devisExpanded: { padding: 14, borderTopWidth: 1, borderTopColor: colors.border.subtle, backgroundColor: colors.background.surface },
+  expandedSection: { marginBottom: 14 },
+  expandedTitle: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  expandedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5 },
+  expandedRowText: { fontSize: 13, color: colors.text.secondary, flex: 1 },
+  expandedRowAmount: { fontSize: 13, fontWeight: '600', color: colors.text.primary, marginLeft: 8 },
+  devisActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  devisActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.primary[500], padding: 10, borderRadius: 8,
   },
-  selectedDevisItem: { borderColor: colors.primary[500], backgroundColor: colors.primary[500] + '10' },
-  devisItemInfo: { flex: 1 },
-  devisItemRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  checkbox: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border.default,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  checkboxSelected: { backgroundColor: colors.primary[500], borderColor: colors.primary[500] },
-  selectedTotal: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.primary[500] + '10', padding: 14, borderRadius: 10, marginTop: 8,
-  },
-  selectedTotalLabel: { fontSize: 14, fontWeight: '500', color: colors.text.secondary },
-  selectedTotalValue: { fontSize: 16, fontWeight: '700', color: colors.primary[500] },
-  // Direct invoice styles
-  clientNameLabel: { fontSize: 16, fontWeight: '600', color: colors.text.primary, marginBottom: 20 },
-  directInvoiceItemCard: {
-    backgroundColor: colors.background.elevated, padding: 16, borderRadius: 12, marginBottom: 16,
+  devisActionText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  // Inline payment form styles
+  paymentSummaryCard: {
+    backgroundColor: colors.background.elevated, borderRadius: 12, padding: 16, marginBottom: 20,
     borderWidth: 1, borderColor: colors.border.subtle,
   },
-  directItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  directItemTitle: { fontSize: 14, fontWeight: '600', color: colors.text.primary },
-  directInput: {
-    backgroundColor: colors.background.surface, borderRadius: 10, padding: 12, fontSize: 15,
-    color: colors.text.primary, borderWidth: 1, borderColor: colors.border.default, marginBottom: 10,
+  paymentSummaryItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.border.subtle,
   },
-  directInputRow: { flexDirection: 'row', gap: 12 },
-  directInputHalf: { flex: 1 },
-  directInputLabel: { fontSize: 12, color: colors.text.muted, marginBottom: 6 },
-  directItemSubtotal: { fontSize: 14, fontWeight: '600', color: colors.primary[500], textAlign: 'right', marginTop: 4 },
-  addItemButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    padding: 14, borderRadius: 10, borderWidth: 2, borderColor: colors.primary[500], borderStyle: 'dashed',
+  paymentSummaryTotal: { borderBottomWidth: 0, paddingTop: 12 },
+  paymentSummaryLabel: { fontSize: 14, color: colors.text.muted },
+  paymentSummaryValue: { fontSize: 15, fontWeight: '600', color: colors.text.primary },
+  paymentHistorySection: {
+    backgroundColor: colors.background.elevated, borderRadius: 12, padding: 14, marginBottom: 20,
+    borderWidth: 1, borderColor: colors.border.subtle,
   },
-  addItemButtonText: { fontSize: 14, fontWeight: '600', color: colors.primary[500] },
-  directInvoiceTotal: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.primary[500] + '10', padding: 16, borderRadius: 12, marginTop: 20,
+  formError: { fontSize: 12, color: '#ef4444', marginTop: 6 },
+  methodRow: { flexDirection: 'row', gap: 8 },
+  methodChip: {
+    flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+    backgroundColor: colors.background.elevated, borderWidth: 1, borderColor: colors.border.default,
   },
-  directTotalLabel: { fontSize: 16, fontWeight: '500', color: colors.text.secondary },
-  directTotalValue: { fontSize: 22, fontWeight: '700', color: colors.primary[500] },
+  methodChipActive: { backgroundColor: colors.primary[500] + '20', borderColor: colors.primary[500] },
+  methodChipText: { fontSize: 13, fontWeight: '500', color: colors.text.muted },
+  methodChipTextActive: { color: colors.primary[500], fontWeight: '600' },
 });

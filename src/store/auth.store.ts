@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.user.role === 'EMPLOYEE') {
         machines = await machinesApi.getMyMachines();
       } else {
-        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE'];
+        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE', 'VENTE_MATERIAU'];
       }
 
       set({
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (user.role === 'EMPLOYEE') {
         machines = await machinesApi.getMyMachines();
       } else {
-        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE'];
+        machines = ['CNC', 'LASER', 'CHAMPS', 'PANNEAUX', 'SERVICE_MAINTENANCE', 'VENTE_MATERIAU'];
       }
 
       set({

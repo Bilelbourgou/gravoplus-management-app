@@ -134,21 +134,21 @@ export function AdminEmployeesScreen() {
     }
   };
 
-  const handleDeactivate = (employee: User) => {
+  const handleDelete = (employee: User) => {
     Alert.alert(
-      'Désactiver l\'employé',
-      `Voulez-vous vraiment désactiver "${employee.firstName} ${employee.lastName}" ?`,
+      'Supprimer l\'employé',
+      `Voulez-vous vraiment supprimer "${employee.firstName} ${employee.lastName}" ?\nCette action est irréversible.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Désactiver',
+          text: 'Supprimer',
           style: 'destructive',
           onPress: async () => {
             try {
-              await usersApi.deactivate(employee.id);
+              await usersApi.delete(employee.id);
               fetchEmployees();
             } catch (error) {
-              Alert.alert('Erreur', 'Impossible de désactiver l\'employé');
+              Alert.alert('Erreur', 'Impossible de supprimer l\'employé');
             }
           },
         },
@@ -192,7 +192,7 @@ export function AdminEmployeesScreen() {
           )}
         </View>
       </View>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeactivate(item)}>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
         <Ionicons name="person-remove-outline" size={20} color={colors.error[500]} />
       </TouchableOpacity>
     </TouchableOpacity>

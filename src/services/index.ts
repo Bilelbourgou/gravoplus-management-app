@@ -187,7 +187,7 @@ export const usersApi = {
     const res = await api.put<ApiResponse<User>>(`/users/${id}/machines`, { machines });
     return res.data.data!;
   },
-  deactivate: async (id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await api.delete(`/users/${id}`);
   },
 };

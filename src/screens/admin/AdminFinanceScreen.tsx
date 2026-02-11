@@ -545,7 +545,7 @@ export function AdminFinanceScreen({ navigation }: any) {
 
       {/* Payment Modal */}
       <Modal visible={!!paymentDevis} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Paiement - {paymentDevis?.reference}</Text>
@@ -608,7 +608,7 @@ export function AdminFinanceScreen({ navigation }: any) {
 
       {/* Closure Modal */}
       <Modal visible={closureModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Clôturer la Caisse</Text>

@@ -42,7 +42,7 @@ export function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={styles.content}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >

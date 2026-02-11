@@ -381,7 +381,7 @@ export function AdminSettingsScreen() {
 
       {/* Material Modal */}
       <Modal visible={materialModal} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <View style={styles.formModal}>
             <View style={styles.formModalHeader}>
               <Text style={styles.formModalTitle}>{editingMaterial ? 'Modifier' : 'Nouveau'} matériau</Text>
@@ -461,7 +461,7 @@ export function AdminSettingsScreen() {
 
       {/* Service Modal */}
       <Modal visible={serviceModal} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <View style={styles.formModal}>
             <View style={styles.formModalHeader}>
               <Text style={styles.formModalTitle}>{editingService ? 'Modifier' : 'Nouveau'} service</Text>

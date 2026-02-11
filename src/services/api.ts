@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { ApiResponse } from '../types';
 
-const API_BASE_URL = 'http://192.168.0.123:3001/api';
+const API_BASE_URL = 'http://192.168.1.149:3001/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

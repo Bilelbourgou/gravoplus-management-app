@@ -136,6 +136,7 @@ export interface AddDevisLineInput {
   quantity?: number;
   unitPrice?: number;
   materialId?: string;
+  serviceId?: string;
   width?: number;
   height?: number;
   dimensionUnit?: string;

@@ -1,7 +1,9 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuthStore } from '../store/auth.store';
 
@@ -171,6 +173,11 @@ function AdminNavigator() {
 export function MainNavigator() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const insets = useSafeAreaInsets();
+
+  // Add extra padding for Android to avoid system navigation bar overlap
+  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 8) + 8 : 8;
+  const tabBarHeight = Platform.OS === 'android' ? 70 + Math.max(insets.bottom, 0) : 70;
 
   return (
     <Tab.Navigator
@@ -179,9 +186,9 @@ export function MainNavigator() {
         tabBarStyle: {
           backgroundColor: colors.background.surface,
           borderTopColor: colors.border.subtle,
-          paddingBottom: 8,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
-          height: 70,
+          height: tabBarHeight,
         },
         tabBarActiveTintColor: colors.primary[500],
         tabBarInactiveTintColor: colors.text.muted,

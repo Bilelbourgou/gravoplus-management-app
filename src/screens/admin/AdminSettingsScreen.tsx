@@ -256,7 +256,7 @@ export function AdminSettingsScreen() {
         {activeTab === 'pricing' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tarifs par machine</Text>
-            {pricing.map((m) => (
+            {pricing.filter((m) => m.key !== 'CUSTOM').map((m) => (
               <TouchableOpacity
                 key={m.id}
                 style={styles.pricingCard}

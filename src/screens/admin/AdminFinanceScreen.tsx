@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { financialApi, invoicesApi } from '../../services';
+import { useAuthStore } from '../../store/auth.store';
 import type { FinancialStats, CaisseDevis, FinancialClosure } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -45,6 +46,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AdminFinanceScreen({ navigation }: any) {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
   const [stats, setStats] = useState<FinancialStats | null>(null);
   const [caisseDevis, setCaisseDevis] = useState<CaisseDevis[]>([]);
   const [history, setHistory] = useState<FinancialClosure[]>([]);
@@ -209,13 +212,15 @@ export function AdminFinanceScreen({ navigation }: any) {
               Ouverture: {stats?.periodStart ? formatDate(stats.periodStart) : 'Première Session'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.closureBtn}
-            onPress={() => setClosureModalVisible(true)}
-          >
-            <Ionicons name="lock-closed" size={16} color="#fff" />
-            <Text style={styles.closureBtnText}>Clôturer</Text>
-          </TouchableOpacity>
+          {isSuperAdmin && (
+            <TouchableOpacity
+              style={styles.closureBtn}
+              onPress={() => setClosureModalVisible(true)}
+            >
+              <Ionicons name="lock-closed" size={16} color="#fff" />
+              <Text style={styles.closureBtnText}>Clôturer</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Tabs ── */}

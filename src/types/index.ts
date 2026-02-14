@@ -1,5 +1,5 @@
 export type UserRole = 'ADMIN' | 'SUPERADMIN' | 'EMPLOYEE';
-export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE' | 'VENTE_MATERIAU';
+export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE' | 'VENTE_MATERIAU' | 'PLIAGE';
 export type DevisStatus = 'DRAFT' | 'VALIDATED' | 'INVOICED' | 'CANCELLED';
 
 export interface User {

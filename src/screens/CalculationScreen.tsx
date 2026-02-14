@@ -21,6 +21,7 @@ const MACHINE_ICONS: Record<string, string> = {
   PANNEAUX: 'grid',
   SERVICE_MAINTENANCE: 'construct',
   VENTE_MATERIAU: 'cube',
+  PLIAGE: 'contract',
 };
 
 export function CalculationScreen({ navigation, route }: Props) {
@@ -47,7 +48,7 @@ export function CalculationScreen({ navigation, route }: Props) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU' || machineType === 'SERVICE_MAINTENANCE') {
+        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU' || machineType === 'SERVICE_MAINTENANCE' || machineType === 'PLIAGE') {
           const mats = await materialsApi.getAll();
           setMaterials(mats);
         }
@@ -355,6 +356,54 @@ export function CalculationScreen({ navigation, route }: Props) {
           </View>
         )}
 
+        {machineType === 'PLIAGE' && (
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Matériau utilisé :</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
+            <TouchableOpacity
+              style={[styles.materialChip, !materialId && styles.materialChipSelected]}
+              onPress={() => setMaterialId(undefined)}
+            >
+              <Text style={[styles.materialChipText, !materialId && styles.materialChipTextSelected]}>Aucun</Text>
+            </TouchableOpacity>
+            {materials.map((m) => (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
+                onPress={() => setMaterialId(m.id)}
+              >
+                <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
+                  {m.name} ({Number(m.pricePerUnit).toFixed(2)} TND)
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Mètres machine :</Text>
+              <TextInput
+                style={styles.input}
+                value={meters}
+                onChangeText={setMeters}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Mètres matériau :</Text>
+              <TextInput
+                style={styles.input}
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        </View>
+      )}
+
         {(machineType === 'PANNEAUX') && (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Quantité *</Text>
@@ -586,6 +635,7 @@ const styles = StyleSheet.create({
   machineType: { fontSize: 24, fontWeight: '700' },
   headerSubtitle: { fontSize: 14, color: colors.text.muted, marginTop: 4 },
   form: { gap: 20 },
+  formSection: { gap: 20 },
   inputGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: '500', color: colors.text.secondary },
   input: {

@@ -70,4 +70,5 @@ export const machineColors = {
   PANNEAUX: colors.info[500],
   SERVICE_MAINTENANCE: colors.error[500],
   VENTE_MATERIAU: colors.neutral[600],
+  PLIAGE: colors.warning[600],
 };

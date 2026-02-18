@@ -14,14 +14,17 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { clientsApi, invoicesApi, financialApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { Client, CreateClientInput, ClientBalanceData, ClientBalanceDevis, CreateCaissePaymentData } from '../../types';
+import type { AdminStackParamList } from '../../navigation/MainNavigator';
 
 export function AdminClientsScreen() {
+  const route = useRoute<RouteProp<AdminStackParamList, 'AdminClients'>>();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +73,17 @@ export function AdminClientsScreen() {
       fetchClients();
     }, [])
   );
+
+  // Auto-open balance modal when navigating with openBalanceClientId
+  useEffect(() => {
+    const clientId = route.params?.openBalanceClientId;
+    if (clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        openBalanceModal(client);
+      }
+    }
+  }, [route.params?.openBalanceClientId, clients]);
 
   const onRefresh = async () => {
     setRefreshing(true);

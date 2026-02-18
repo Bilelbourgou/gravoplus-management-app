@@ -199,7 +199,11 @@ export function AdminDashboardScreen() {
               <Text style={styles.unpaidTitle}>Clients avec solde impayé ({stats.unpaidClients.length})</Text>
             </View>
             {stats.unpaidClients.map((c) => (
-              <View key={c.clientId} style={styles.unpaidCard}>
+              <TouchableOpacity
+                key={c.clientId}
+                style={styles.unpaidCard}
+                onPress={() => navigation.navigate('AdminClients', { openBalanceClientId: c.clientId })}
+              >
                 <Text style={styles.unpaidClientName}>{c.clientName}</Text>
                 <View style={styles.unpaidRow}>
                   <Text style={styles.unpaidLabel}>Total: <Text style={{ fontWeight: '600' }}>{c.totalAmount.toFixed(3)} TND</Text></Text>
@@ -208,7 +212,7 @@ export function AdminDashboardScreen() {
                 <View style={styles.unpaidRemaining}>
                   <Text style={styles.unpaidRemainingText}>Reste: {c.remaining.toFixed(3)} TND</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}

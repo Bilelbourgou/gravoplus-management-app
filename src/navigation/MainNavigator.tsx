@@ -35,7 +35,7 @@ export type MainTabParamList = {
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
-  AdminClients: undefined;
+  AdminClients: { openBalanceClientId?: string } | undefined;
   AdminEmployees: undefined;
   AdminSettings: undefined;
   AdminDevis: undefined;

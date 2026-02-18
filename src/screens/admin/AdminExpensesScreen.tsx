@@ -17,56 +17,17 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { expensesApi } from '../../services';
+import { expensesApi, expenseCategoriesApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { Expense, ExpenseCategory, CreateExpenseInput } from '../../types';
 
-const CATEGORY_LABELS: Record<string, string> = {
-  'Matériel': 'Matériel',
-  'Fournitures': 'Fournitures',
-  'Transport': 'Transport',
-  'Maintenance': 'Maintenance',
-  'Salaires': 'Salaires',
-  'Loyer': 'Loyer',
-  'Électricité': 'Électricité',
-  'Autre': 'Autre',
-};
+// Fallback constants for categories not yet loaded or missing
+const FALLBACK_CATEGORY_COLOR = '#6c757d';
+const FALLBACK_CATEGORY_ICON = 'ellipsis-horizontal';
 
-const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  'Matériel': 'cube',
-  'Fournitures': 'receipt',
-  'Transport': 'car',
-  'Maintenance': 'build',
-  'Salaires': 'people',
-  'Loyer': 'home',
-  'Électricité': 'flash',
-  'Autre': 'ellipsis-horizontal',
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  'Matériel': '#0066cc',
-  'Fournitures': '#28a745',
-  'Transport': '#856404',
-  'Maintenance': '#6f42c1',
-  'Salaires': '#17a2b8',
-  'Loyer': '#fd7e14',
-  'Électricité': '#d39e00',
-  'Autre': '#6c757d',
-};
-
-const CATEGORIES: ExpenseCategory[] = [
-  'Matériel',
-  'Fournitures',
-  'Transport',
-  'Maintenance',
-  'Salaires',
-  'Loyer',
-  'Électricité',
-  'Autre',
-];
-
-export function AdminExpensesScreen() {
+export function AdminExpensesScreen({ navigation }: any) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -77,17 +38,26 @@ export function AdminExpensesScreen() {
   const [formData, setFormData] = useState<CreateExpenseInput>({
     description: '',
     amount: 0,
-    category: 'Autre',
+    category: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
 
-  const fetchExpenses = async () => {
+  const fetchData = async () => {
     try {
-      const data = await expensesApi.getAll();
-      setExpenses(data);
-      const total = data.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const [expensesData, categoriesData] = await Promise.all([
+        expensesApi.getAll(),
+        expenseCategoriesApi.getAll(),
+      ]);
+      setExpenses(expensesData);
+      setCategories(categoriesData);
+      const total = expensesData.reduce((sum, e) => sum + Number(e.amount || 0), 0);
       setTotalExpenses(total);
+
+      // Set default category if not set
+      if (!formData.category && categoriesData.length > 0) {
+        setFormData(prev => ({ ...prev, category: categoriesData[0].name }));
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -97,13 +67,13 @@ export function AdminExpensesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchExpenses();
+      fetchData();
     }, [])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchExpenses();
+    await fetchData();
     setRefreshing(false);
   };
 
@@ -113,7 +83,7 @@ export function AdminExpensesScreen() {
       setFormData({
         description: expense.description,
         amount: expense.amount,
-        category: expense.category,
+        category: expense.categoryName || '',
         date: expense.date.split('T')[0],
         notes: expense.notes || '',
       });
@@ -122,7 +92,7 @@ export function AdminExpensesScreen() {
       setFormData({
         description: '',
         amount: 0,
-        category: 'Autre',
+        category: categories.length > 0 ? categories[0].name : '',
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
@@ -148,7 +118,7 @@ export function AdminExpensesScreen() {
         await expensesApi.create(formData);
       }
       setModalVisible(false);
-      fetchExpenses();
+      fetchData();
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de sauvegarder la dépense');
     } finally {
@@ -168,7 +138,7 @@ export function AdminExpensesScreen() {
           onPress: async () => {
             try {
               await expensesApi.delete(expense.id);
-              fetchExpenses();
+              fetchData();
             } catch (error) {
               Alert.alert('Erreur', 'Impossible de supprimer la dépense');
             }
@@ -179,20 +149,23 @@ export function AdminExpensesScreen() {
   };
 
   const renderItem = ({ item }: { item: Expense }) => {
-    const categoryColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS['Autre'];
-    const categoryIcon = CATEGORY_ICONS[item.category] || CATEGORY_ICONS['Autre'];
+    const categoryInfo = item.category || categories.find(c => c.name === item.categoryName);
+    const categoryColor = categoryInfo?.color || FALLBACK_CATEGORY_COLOR;
+    
+    // Simple icon mapping since we don't have metadata for icons in the same way yet
+    const iconName = (categoryInfo?.icon?.toLowerCase() as any) || FALLBACK_CATEGORY_ICON;
 
     return (
       <TouchableOpacity style={styles.expenseCard} onPress={() => openModal(item)}>
         <View style={[styles.categoryIcon, { backgroundColor: categoryColor + '20' }]}>
-          <Ionicons name={categoryIcon} size={22} color={categoryColor} />
+          <Ionicons name={iconName} size={22} color={categoryColor} />
         </View>
         <View style={styles.expenseInfo}>
           <Text style={styles.expenseDescription}>{item.description}</Text>
           <View style={styles.expenseDetails}>
             <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}>
               <Text style={[styles.categoryText, { color: categoryColor }]}>
-                {CATEGORY_LABELS[item.category]}
+                {item.categoryName}
               </Text>
             </View>
             <Text style={styles.expenseDate}>
@@ -229,6 +202,9 @@ export function AdminExpensesScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Dépenses</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AdminExpenseCategories')}>
+            <Text style={styles.manageCategoriesLink}>Gérer les catégories</Text>
+          </TouchableOpacity>
           <Text style={styles.subtitle}>{expenses.length} dépense(s)</Text>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
@@ -305,22 +281,21 @@ export function AdminExpensesScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Catégorie</Text>
                 <View style={styles.categoriesGrid}>
-                  {CATEGORIES.map((cat) => {
-                    const isSelected = formData.category === cat;
-                    const catColor = CATEGORY_COLORS[cat];
+                  {categories.map((cat) => {
+                    const isSelected = formData.category === cat.name;
                     return (
                       <TouchableOpacity
-                        key={cat}
+                        key={cat.id}
                         style={[
                           styles.categoryOption,
-                          isSelected && { backgroundColor: catColor, borderColor: catColor },
+                          isSelected && { backgroundColor: cat.color, borderColor: cat.color },
                         ]}
-                        onPress={() => setFormData({ ...formData, category: cat })}
+                        onPress={() => setFormData({ ...formData, category: cat.name })}
                       >
                         <Ionicons
-                          name={CATEGORY_ICONS[cat]}
+                          name={(cat.icon?.toLowerCase() as any) || 'package'}
                           size={18}
-                          color={isSelected ? '#fff' : catColor}
+                          color={isSelected ? '#fff' : cat.color}
                         />
                         <Text
                           style={[
@@ -328,7 +303,7 @@ export function AdminExpensesScreen() {
                             isSelected && { color: '#fff' },
                           ]}
                         >
-                          {CATEGORY_LABELS[cat]}
+                          {cat.name}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -397,7 +372,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 16,
   },
   title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
-  subtitle: { fontSize: 14, color: colors.text.muted, marginTop: 4 },
+  manageCategoriesLink: { fontSize: 13, color: colors.primary[500], fontWeight: '600', marginTop: 2 },
+  subtitle: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
   addButton: {
     width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primary[500],
     justifyContent: 'center', alignItems: 'center',

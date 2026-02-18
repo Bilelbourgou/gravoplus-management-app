@@ -217,21 +217,21 @@ export interface InvoiceItem {
   total: number;
 }
 
-export type ExpenseCategory =
-  | 'Matériel'
-  | 'Fournitures'
-  | 'Transport'
-  | 'Maintenance'
-  | 'Salaires'
-  | 'Loyer'
-  | 'Électricité'
-  | 'Autre';
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Expense {
   id: string;
   description: string;
   amount: number;
-  category: ExpenseCategory;
+  categoryName: string;
+  category?: ExpenseCategory;
   date: string;
   notes?: string;
   createdAt: string;
@@ -258,7 +258,7 @@ export interface CreateClientInput {
 export interface CreateExpenseInput {
   description: string;
   amount: number;
-  category: ExpenseCategory;
+  category: string; // Category name
   date: string;
   notes?: string;
 }

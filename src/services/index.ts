@@ -25,6 +25,7 @@ import {
   FinancialClosure,
   CaisseDevis,
   CreateCaissePaymentData,
+  ExpenseCategory,
 } from '../types';
 
 // Auth
@@ -273,5 +274,23 @@ export const financialApi = {
   createClosure: async (notes?: string): Promise<FinancialClosure> => {
     const res = await api.post('/financial/close', { notes });
     return res.data;
+  },
+};
+// Expense Categories (Admin)
+export const expenseCategoriesApi = {
+  getAll: async (): Promise<ExpenseCategory[]> => {
+    const res = await api.get<ApiResponse<ExpenseCategory[]>>('/expense-categories');
+    return res.data.data!;
+  },
+  create: async (data: { name: string; color?: string; icon?: string }): Promise<ExpenseCategory> => {
+    const res = await api.post<ApiResponse<ExpenseCategory>>('/expense-categories', data);
+    return res.data.data!;
+  },
+  update: async (id: string, data: Partial<{ name: string; color: string; icon: string }>): Promise<ExpenseCategory> => {
+    const res = await api.put<ApiResponse<ExpenseCategory>>(`/expense-categories/${id}`, data);
+    return res.data.data!;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/expense-categories/${id}`);
   },
 };

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { expenseCategoriesApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { ExpenseCategory } from '../../types';
+import { getIoniconsName } from './AdminExpensesScreen';
 
 export function ExpenseCategoryScreen({ navigation }: any) {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
@@ -45,7 +46,7 @@ export function ExpenseCategoryScreen({ navigation }: any) {
       await expenseCategoriesApi.create({
         name: newName,
         color: selectedColor,
-        icon: 'Package',
+        icon: 'package',
       });
       setNewName('');
       fetchCategories();
@@ -88,6 +89,7 @@ export function ExpenseCategoryScreen({ navigation }: any) {
     <View style={styles.categoryCard}>
       <View style={styles.categoryInfo}>
         <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+        <Ionicons name={getIoniconsName(item.icon)} size={18} color={item.color} style={{ marginRight: 4 }} />
         <Text style={styles.categoryName}>{item.name}</Text>
       </View>
       <TouchableOpacity onPress={() => handleDelete(item)}>

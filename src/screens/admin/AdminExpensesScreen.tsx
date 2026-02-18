@@ -25,6 +25,87 @@ import type { Expense, ExpenseCategory, CreateExpenseInput } from '../../types';
 const FALLBACK_CATEGORY_COLOR = '#6c757d';
 const FALLBACK_CATEGORY_ICON = 'ellipsis-horizontal';
 
+// Map generic icon names (from backend/lucide) to Ionicons
+export const getIoniconsName = (iconName?: string): keyof typeof Ionicons.glyphMap => {
+  if (!iconName) return FALLBACK_CATEGORY_ICON as any;
+  
+  const mapping: Record<string, string> = {
+    'package': 'cube',
+    'receipt': 'receipt',
+    'truck': 'car',
+    'tool': 'build',
+    'users': 'people',
+    'home': 'home',
+    'zap': 'flash',
+    'morehorizontal': 'ellipsis-horizontal',
+    'package-2': 'cube',
+    'wrench': 'build',
+    'user': 'person',
+    'shopping-cart': 'cart',
+    'credit-card': 'card',
+    'activity': 'pulse',
+    'archive': 'archive',
+    'bar-chart': 'bar-chart',
+    'bell': 'notifications',
+    'book': 'book',
+    'briefcase': 'briefcase',
+    'calendar': 'calendar',
+    'camera': 'camera',
+    'clipboard': 'clipboard',
+    'clock': 'time',
+    'cog': 'settings',
+    'database': 'database',
+    'file': 'document',
+    'folder': 'folder',
+    'gift': 'gift',
+    'globe': 'globe',
+    'heart': 'heart',
+    'image': 'image',
+    'key': 'key',
+    'layers': 'layers',
+    'layout': 'grid',
+    'link': 'link',
+    'list': 'list',
+    'lock': 'lock',
+    'mail': 'mail',
+    'map': 'map',
+    'menu': 'menu',
+    'message-circle': 'chatbubble',
+    'mic': 'mic',
+    'moon': 'moon',
+    'music': 'musical-notes',
+    'phone': 'call',
+    'play': 'play',
+    'power': 'power',
+    'printer': 'print',
+    'radio': 'radio',
+    'save': 'save',
+    'search': 'search',
+    'send': 'send',
+    'server': 'server',
+    'share-2': 'share',
+    'shield': 'shield',
+    'shopping-bag': 'bag',
+    'smartphone': 'smartphone',
+    'speaker': 'volume-medium',
+    'star': 'star',
+    'sun': 'sun',
+    'tablet': 'tablet-portrait',
+    'tag': 'tag',
+    'terminal': 'terminal',
+    'thermometer': 'thermometer',
+    'thumbs-up': 'thumbs-up',
+    'trash-2': 'trash',
+    'tv': 'tv',
+    'video': 'videocam',
+    'volume-2': 'volume-high',
+    'wifi': 'wifi',
+  };
+
+  const name = iconName.toLowerCase().replace(/-/g, '');
+  return (mapping[iconName.toLowerCase()] || mapping[name] || 'ellipsis-horizontal') as any;
+};
+
 export function AdminExpensesScreen({ navigation }: any) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
@@ -151,9 +232,7 @@ export function AdminExpensesScreen({ navigation }: any) {
   const renderItem = ({ item }: { item: Expense }) => {
     const categoryInfo = item.category || categories.find(c => c.name === item.categoryName);
     const categoryColor = categoryInfo?.color || FALLBACK_CATEGORY_COLOR;
-    
-    // Simple icon mapping since we don't have metadata for icons in the same way yet
-    const iconName = (categoryInfo?.icon?.toLowerCase() as any) || FALLBACK_CATEGORY_ICON;
+    const iconName = getIoniconsName(categoryInfo?.icon);
 
     return (
       <TouchableOpacity style={styles.expenseCard} onPress={() => openModal(item)}>
@@ -293,7 +372,7 @@ export function AdminExpensesScreen({ navigation }: any) {
                         onPress={() => setFormData({ ...formData, category: cat.name })}
                       >
                         <Ionicons
-                          name={(cat.icon?.toLowerCase() as any) || 'package'}
+                          name={getIoniconsName(cat.icon)}
                           size={18}
                           color={isSelected ? '#fff' : cat.color}
                         />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -44,6 +44,73 @@ export function CalculationScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingLines, setLoadingLines] = useState(true);
   const [maintenanceType, setMaintenanceType] = useState<'manual' | 'material' | 'service'>('manual');
+  const [materialDropdownOpen, setMaterialDropdownOpen] = useState(false);
+
+  const selectedMaterial = materials.find(m => m.id === materialId);
+
+  const MaterialDropdown = ({ label, showPrice, showNone, filterActive = true }: { label: string; showPrice?: boolean; showNone?: boolean; filterActive?: boolean }) => {
+    const filteredMaterials = filterActive ? materials.filter(m => m.isActive) : materials;
+    return (
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{label}</Text>
+        <TouchableOpacity
+          style={styles.dropdownTrigger}
+          onPress={() => setMaterialDropdownOpen(true)}
+        >
+          <Text style={selectedMaterial ? styles.dropdownTriggerText : styles.dropdownPlaceholderText}>
+            {selectedMaterial
+              ? showPrice
+                ? `${selectedMaterial.name} — ${Number(selectedMaterial.pricePerUnit).toFixed(2)} TND/${selectedMaterial.unit}`
+                : selectedMaterial.name
+              : 'Sélectionner un matériau'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={colors.text.muted} />
+        </TouchableOpacity>
+
+        <Modal visible={materialDropdownOpen} transparent animationType="fade">
+          <TouchableOpacity
+            style={styles.dropdownOverlay}
+            activeOpacity={1}
+            onPress={() => setMaterialDropdownOpen(false)}
+          >
+            <View style={styles.dropdownModal}>
+              <Text style={styles.dropdownModalTitle}>{label}</Text>
+              {showNone && (
+                <TouchableOpacity
+                  style={[styles.dropdownItem, !materialId && styles.dropdownItemSelected]}
+                  onPress={() => { setMaterialId(undefined); setMaterialDropdownOpen(false); }}
+                >
+                  <Text style={[styles.dropdownItemText, !materialId && styles.dropdownItemTextSelected]}>Aucun</Text>
+                  {!materialId && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
+                </TouchableOpacity>
+              )}
+              <ScrollView style={{ maxHeight: 300 }}>
+                {filteredMaterials.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.dropdownItem, materialId === m.id && styles.dropdownItemSelected]}
+                    onPress={() => { setMaterialId(m.id); setMaterialDropdownOpen(false); }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.dropdownItemText, materialId === m.id && styles.dropdownItemTextSelected]}>
+                        {m.name}
+                      </Text>
+                      {showPrice && (
+                        <Text style={styles.dropdownItemPrice}>
+                          {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
+                        </Text>
+                      )}
+                    </View>
+                    {materialId === m.id && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </View>
+    );
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -322,22 +389,7 @@ export function CalculationScreen({ navigation, route }: Props) {
             </View>
 
             {materials.length > 0 && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Matériau (optionnel)</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
-                  {materials.filter(m => m.isActive).map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
-                      onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
-                    >
-                      <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
-                        {m.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+              <MaterialDropdown label="Matériau (optionnel)" showNone />
             )}
           </>
         )}
@@ -358,26 +410,7 @@ export function CalculationScreen({ navigation, route }: Props) {
 
         {machineType === 'PLIAGE' && (
         <View style={styles.formSection}>
-          <Text style={styles.label}>Matériau utilisé :</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
-            <TouchableOpacity
-              style={[styles.materialChip, !materialId && styles.materialChipSelected]}
-              onPress={() => setMaterialId(undefined)}
-            >
-              <Text style={[styles.materialChipText, !materialId && styles.materialChipTextSelected]}>Aucun</Text>
-            </TouchableOpacity>
-            {materials.map((m) => (
-              <TouchableOpacity
-                key={m.id}
-                style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
-                onPress={() => setMaterialId(m.id)}
-              >
-                <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
-                  {m.name} ({Number(m.pricePerUnit).toFixed(2)} TND)
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <MaterialDropdown label="Matériau utilisé :" showPrice showNone filterActive={false} />
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -460,22 +493,7 @@ export function CalculationScreen({ navigation, route }: Props) {
 
             {maintenanceType === 'material' && (
               <>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Matériau *</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
-                    {materials.filter(m => m.isActive).map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
-                        onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
-                      >
-                        <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
-                          {m.name} - {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+                <MaterialDropdown label="Matériau *" showPrice />
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Quantité</Text>
                   <TextInput
@@ -526,22 +544,7 @@ export function CalculationScreen({ navigation, route }: Props) {
 
         {machineType === 'VENTE_MATERIAU' && (
            <>
-             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Matériau *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.materialsScroll}>
-                  {materials.filter(m => m.isActive).map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      style={[styles.materialChip, materialId === m.id && styles.materialChipSelected]}
-                      onPress={() => setMaterialId(materialId === m.id ? undefined : m.id)}
-                    >
-                      <Text style={[styles.materialChipText, materialId === m.id && styles.materialChipTextSelected]}>
-                        {m.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+             <MaterialDropdown label="Matériau *" />
 
               <View style={styles.row}>
                <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -808,5 +811,68 @@ const styles = StyleSheet.create({
   },
   typeButtonTextActive: {
     color: '#fff',
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background.elevated,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  dropdownTriggerText: {
+    fontSize: 16,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  dropdownPlaceholderText: {
+    fontSize: 16,
+    color: colors.text.muted,
+    flex: 1,
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  dropdownModal: {
+    backgroundColor: colors.background.surface,
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  dropdownModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 16,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  dropdownItemSelected: {
+    backgroundColor: colors.primary[500] + '15',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  dropdownItemTextSelected: {
+    color: colors.primary[500],
+    fontWeight: '600',
+  },
+  dropdownItemPrice: {
+    fontSize: 13,
+    color: colors.text.muted,
+    marginTop: 2,
   },
 });

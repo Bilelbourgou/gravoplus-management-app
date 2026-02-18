@@ -70,60 +70,70 @@ export function AdminDashboardScreen() {
     );
   }
 
+  const dailyCards = [
+    {
+      label: "Devis aujourd'hui",
+      value: stats.todaysDevisTotal || 0,
+      icon: 'document-text' as const,
+      color: '#3b82f6',
+      bg: '#3b82f6',
+    },
+    {
+      label: "Factures aujourd'hui",
+      value: stats.todaysInvoicesTotal || 0,
+      icon: 'receipt' as const,
+      color: '#8b5cf6',
+      bg: '#8b5cf6',
+    },
+    {
+      label: "Paiements aujourd'hui",
+      value: stats.todaysPaymentsTotal || 0,
+      icon: 'cash' as const,
+      color: '#22c55e',
+      bg: '#22c55e',
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Tableau de bord</Text>
-        <Text style={styles.subtitle}>Vue d'ensemble</Text>
+        <Text style={styles.subtitle}>
+          {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </Text>
       </View>
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary[500]} />
         }
       >
-        {/* Daily Stats */}
-        <View style={styles.dailyRow}>
-          <View style={[styles.dailyCard, { borderLeftColor: '#3b82f6' }]}>
-            <Text style={styles.dailyValue}>{(stats.todaysDevisTotal || 0).toFixed(2)}</Text>
-            <Text style={styles.dailyLabel}>Devis aujourd'hui</Text>
-          </View>
-          <View style={[styles.dailyCard, { borderLeftColor: '#8b5cf6' }]}>
-            <Text style={styles.dailyValue}>{(stats.todaysInvoicesTotal || 0).toFixed(2)}</Text>
-            <Text style={styles.dailyLabel}>Factures aujourd'hui</Text>
-          </View>
-          <View style={[styles.dailyCard, { borderLeftColor: '#22c55e' }]}>
-            <Text style={styles.dailyValue}>{(stats.todaysPaymentsTotal || 0).toFixed(2)}</Text>
-            <Text style={styles.dailyLabel}>Paiements aujourd'hui</Text>
-          </View>
-        </View>
-
-        {/* Financial Stats */}
-        <View style={styles.financialRow}>
-          <View style={[styles.financialCard, styles.revenueCard]}>
-            <Ionicons name="trending-up" size={24} color="#22c55e" />
-            <Text style={styles.financialValue}>{stats.totalRevenue.toFixed(0)}</Text>
-            <Text style={styles.financialLabel}>Revenus TND</Text>
-          </View>
-          <View style={[styles.financialCard, styles.expenseCard]}>
-            <Ionicons name="trending-down" size={24} color="#ef4444" />
-            <Text style={styles.financialValue}>{stats.totalExpenses.toFixed(0)}</Text>
-            <Text style={styles.financialLabel}>Dépenses TND</Text>
-          </View>
-        </View>
-
-        <View style={[styles.profitCard, stats.netProfit >= 0 ? styles.profitPositive : styles.profitNegative]}>
-          <Ionicons name="wallet" size={28} color={stats.netProfit >= 0 ? '#22c55e' : '#ef4444'} />
-          <View style={styles.profitInfo}>
-            <Text style={styles.profitLabel}>Bénéfice net</Text>
-            <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? '#22c55e' : '#ef4444' }]}>
-              {stats.netProfit.toFixed(2)} TND
-            </Text>
-          </View>
+        {/* Daily Statistics */}
+        <Text style={styles.sectionLabel}>STATISTIQUES DU JOUR</Text>
+        <View style={styles.dailyCards}>
+          {dailyCards.map((card, index) => (
+            <View key={index} style={styles.dailyCard}>
+              <View style={[styles.dailyCardIconContainer, { backgroundColor: card.bg + '18' }]}>
+                <Ionicons name={card.icon} size={24} color={card.color} />
+              </View>
+              <View style={styles.dailyCardContent}>
+                <Text style={styles.dailyCardLabel}>{card.label}</Text>
+                <View style={styles.dailyCardValueRow}>
+                  <Text style={[styles.dailyCardValue, { color: card.color }]}>
+                    {card.value.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.dailyCardCurrency, { color: card.color }]}>TND</Text>
+                </View>
+              </View>
+              <View style={[styles.dailyCardAccent, { backgroundColor: card.color }]} />
+            </View>
+          ))}
         </View>
 
         {/* Quick Actions */}
+        <Text style={styles.sectionLabel}>ACCÈS RAPIDE</Text>
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickAction}
@@ -179,38 +189,6 @@ export function AdminDashboardScreen() {
             </View>
             <Text style={styles.quickActionText}>Caisse</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#3b82f620' }]}>
-              <Ionicons name="people" size={22} color="#3b82f6" />
-            </View>
-            <Text style={styles.statValue}>{stats.totalClients}</Text>
-            <Text style={styles.statLabel}>Clients</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#8b5cf620' }]}>
-              <Ionicons name="person" size={22} color="#8b5cf6" />
-            </View>
-            <Text style={styles.statValue}>{stats.totalEmployees}</Text>
-            <Text style={styles.statLabel}>Employés</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#f9731620' }]}>
-              <Ionicons name="document-text" size={22} color="#f97316" />
-            </View>
-            <Text style={styles.statValue}>{stats.totalDevis}</Text>
-            <Text style={styles.statLabel}>Devis</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#22c55e20' }]}>
-              <Ionicons name="receipt" size={22} color="#22c55e" />
-            </View>
-            <Text style={styles.statValue}>{stats.totalInvoices}</Text>
-            <Text style={styles.statLabel}>Factures</Text>
-          </View>
         </View>
 
         {/* Unpaid Clients Warning */}
@@ -291,55 +269,120 @@ const styles = StyleSheet.create({
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.base },
   errorText: { color: colors.text.muted, marginTop: 12, fontSize: 16 },
   header: {
-    paddingHorizontal: 20, paddingVertical: 16,
-    width: '100%', maxWidth: 600, alignSelf: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text.primary },
-  subtitle: { fontSize: 14, color: colors.text.muted, marginTop: 4 },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: colors.text.primary,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.text.muted,
+    marginTop: 4,
+    textTransform: 'capitalize',
+  },
   content: {
-    flex: 1, paddingHorizontal: 20,
-    width: '100%', maxWidth: 600, alignSelf: 'center',
+    flex: 1,
   },
-  dailyRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  dailyCards: {
+    gap: 12,
+    marginBottom: 28,
+  },
   dailyCard: {
-    flex: 1, backgroundColor: colors.background.surface, padding: 12, borderRadius: 12,
-    borderLeftWidth: 3, borderWidth: 1, borderColor: colors.border.subtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.surface,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    overflow: 'hidden',
   },
-  dailyValue: { fontSize: 16, fontWeight: '700', color: colors.text.primary },
-  dailyLabel: { fontSize: 10, color: colors.text.muted, marginTop: 4 },
-  financialRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  financialCard: {
-    flex: 1, padding: 16, borderRadius: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border.subtle,
+  dailyCardIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  revenueCard: { backgroundColor: '#22c55e10' },
-  expenseCard: { backgroundColor: '#ef444410' },
-  financialValue: { fontSize: 24, fontWeight: '700', color: colors.text.primary, marginTop: 8 },
-  financialLabel: { fontSize: 12, color: colors.text.muted, marginTop: 4 },
-  profitCard: {
-    flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16,
-    marginBottom: 20, gap: 16, borderWidth: 1, borderColor: colors.border.subtle,
+  dailyCardContent: {
+    flex: 1,
   },
-  profitPositive: { backgroundColor: '#22c55e10' },
-  profitNegative: { backgroundColor: '#ef444410' },
-  profitInfo: { flex: 1 },
-  profitLabel: { fontSize: 14, color: colors.text.muted },
-  profitValue: { fontSize: 28, fontWeight: '700', marginTop: 4 },
-  quickActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24, gap: 10 },
+  dailyCardLabel: {
+    fontSize: 13,
+    color: colors.text.muted,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  dailyCardValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  dailyCardValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  dailyCardCurrency: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.7,
+  },
+  dailyCardAccent: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 24,
+  },
   quickAction: {
-    width: '31%', backgroundColor: colors.background.surface, padding: 14, borderRadius: 12,
-    alignItems: 'center', borderWidth: 1, borderColor: colors.border.subtle,
+    width: '31%',
+    backgroundColor: colors.background.surface,
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
-  quickActionIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
-  quickActionText: { fontSize: 12, fontWeight: '500', color: colors.text.secondary },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  statCard: {
-    width: '47%', backgroundColor: colors.background.surface, padding: 16, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.border.subtle,
+  quickActionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  statIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  statValue: { fontSize: 24, fontWeight: '700', color: colors.text.primary },
-  statLabel: { fontSize: 12, color: colors.text.muted, marginTop: 4 },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 16 },
   statusGrid: { backgroundColor: colors.background.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colors.border.subtle },

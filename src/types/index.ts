@@ -217,7 +217,15 @@ export interface InvoiceItem {
   total: number;
 }
 
-export type ExpenseCategory = 'MATERIAL' | 'EQUIPMENT' | 'UTILITIES' | 'SALARY' | 'RENT' | 'OTHER';
+export type ExpenseCategory =
+  | 'Matériel'
+  | 'Fournitures'
+  | 'Transport'
+  | 'Maintenance'
+  | 'Salaires'
+  | 'Loyer'
+  | 'Électricité'
+  | 'Autre';
 
 export interface Expense {
   id: string;

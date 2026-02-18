@@ -25,17 +25,28 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
     devisApi.getById(devisId).then(setDevis).catch(console.error).finally(() => setLoading(false));
   }, [devisId]);
 
-  const handleDone = () => {
-    Alert.alert('Succès', 'Le devis a été créé avec succès!', [
-      {
-        text: 'OK',
-        onPress: () => {
-          navigation.dispatch(
-            CommonActions.reset({ index: 0, routes: [{ name: 'ClientSelect' }] })
-          );
+  const handleDone = async () => {
+    setLoading(true);
+    try {
+      // Automatic Validation
+      await devisApi.validate(devisId);
+      
+      Alert.alert('Succès', 'Le devis a été créé et validé avec succès!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.dispatch(
+              CommonActions.reset({ index: 0, routes: [{ name: 'ClientSelect' }] })
+            );
+          },
         },
-      },
-    ]);
+      ]);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erreur', 'Impossible de valider le devis. Veuillez informer un administrateur.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading || !devis) {

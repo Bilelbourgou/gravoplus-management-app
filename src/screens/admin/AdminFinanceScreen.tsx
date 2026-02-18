@@ -16,10 +16,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
+import { colors, statusColors, expenseCategoryColors } from '../../theme/colors';
 import { financialApi, invoicesApi } from '../../services';
 import { useAuthStore } from '../../store/auth.store';
-import type { FinancialStats, CaisseDevis, FinancialClosure } from '../../types';
+import type { FinancialStats, CaisseDevis, FinancialClosure, DashboardStats, DevisStatus, ExpenseCategory } from '../../types';
 
 const { width } = Dimensions.get('window');
 
@@ -38,8 +38,19 @@ const formatDateShort = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('fr-FR');
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<DevisStatus, string> = {
   DRAFT: 'Brouillon', VALIDATED: 'Validé', INVOICED: 'Facturé', CANCELLED: 'Annulé',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'Matériel': 'Matériel',
+  'Fournitures': 'Fournitures',
+  'Transport': 'Transport',
+  'Maintenance': 'Maintenance',
+  'Salaires': 'Salaires',
+  'Loyer': 'Loyer',
+  'Électricité': 'Électricité',
+  'Autre': 'Autre',
 };
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: '#f97316', VALIDATED: '#3b82f6', INVOICED: '#22c55e', CANCELLED: '#ef4444',
@@ -495,8 +506,10 @@ export function AdminFinanceScreen({ navigation }: any) {
                     </Text>
                   </View>
                   <View style={{ flex: 1.5 }}>
-                    <View style={[styles.statusBadge, { backgroundColor: '#f9731620', alignSelf: 'flex-start' }]}>
-                      <Text style={{ fontSize: 10, fontWeight: '600', color: '#f97316' }}>{e.category}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: (expenseCategoryColors[e.category] || '#6c757d') + '20', alignSelf: 'flex-start' }]}>
+                      <Text style={{ fontSize: 10, fontWeight: '600', color: expenseCategoryColors[e.category] || '#6c757d' }}>
+                        {CATEGORY_LABELS[e.category] || e.category}
+                      </Text>
                     </View>
                   </View>
                   <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#ef4444', fontWeight: '700' }]}>-{Number(e.amount).toFixed(3)}</Text>

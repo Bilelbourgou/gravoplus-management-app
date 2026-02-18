@@ -21,34 +21,49 @@ import { expensesApi } from '../../services';
 import { colors } from '../../theme/colors';
 import type { Expense, ExpenseCategory, CreateExpenseInput } from '../../types';
 
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  MATERIAL: 'Matériel',
-  EQUIPMENT: 'Équipement',
-  UTILITIES: 'Services',
-  SALARY: 'Salaire',
-  RENT: 'Loyer',
-  OTHER: 'Autre',
+const CATEGORY_LABELS: Record<string, string> = {
+  'Matériel': 'Matériel',
+  'Fournitures': 'Fournitures',
+  'Transport': 'Transport',
+  'Maintenance': 'Maintenance',
+  'Salaires': 'Salaires',
+  'Loyer': 'Loyer',
+  'Électricité': 'Électricité',
+  'Autre': 'Autre',
 };
 
-const CATEGORY_ICONS: Record<ExpenseCategory, keyof typeof Ionicons.glyphMap> = {
-  MATERIAL: 'cube',
-  EQUIPMENT: 'hardware-chip',
-  UTILITIES: 'flash',
-  SALARY: 'people',
-  RENT: 'home',
-  OTHER: 'ellipsis-horizontal',
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Matériel': 'cube',
+  'Fournitures': 'receipt',
+  'Transport': 'car',
+  'Maintenance': 'build',
+  'Salaires': 'people',
+  'Loyer': 'home',
+  'Électricité': 'flash',
+  'Autre': 'ellipsis-horizontal',
 };
 
-const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  MATERIAL: '#3b82f6',
-  EQUIPMENT: '#8b5cf6',
-  UTILITIES: '#f97316',
-  SALARY: '#22c55e',
-  RENT: '#ef4444',
-  OTHER: '#6b7280',
+const CATEGORY_COLORS: Record<string, string> = {
+  'Matériel': '#0066cc',
+  'Fournitures': '#28a745',
+  'Transport': '#856404',
+  'Maintenance': '#6f42c1',
+  'Salaires': '#17a2b8',
+  'Loyer': '#fd7e14',
+  'Électricité': '#d39e00',
+  'Autre': '#6c757d',
 };
 
-const CATEGORIES: ExpenseCategory[] = ['MATERIAL', 'EQUIPMENT', 'UTILITIES', 'SALARY', 'RENT', 'OTHER'];
+const CATEGORIES: ExpenseCategory[] = [
+  'Matériel',
+  'Fournitures',
+  'Transport',
+  'Maintenance',
+  'Salaires',
+  'Loyer',
+  'Électricité',
+  'Autre',
+];
 
 export function AdminExpensesScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -62,7 +77,7 @@ export function AdminExpensesScreen() {
   const [formData, setFormData] = useState<CreateExpenseInput>({
     description: '',
     amount: 0,
-    category: 'OTHER',
+    category: 'Autre',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -107,7 +122,7 @@ export function AdminExpensesScreen() {
       setFormData({
         description: '',
         amount: 0,
-        category: 'OTHER',
+        category: 'Autre',
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
@@ -164,8 +179,8 @@ export function AdminExpensesScreen() {
   };
 
   const renderItem = ({ item }: { item: Expense }) => {
-    const categoryColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.OTHER;
-    const categoryIcon = CATEGORY_ICONS[item.category] || CATEGORY_ICONS.OTHER;
+    const categoryColor = CATEGORY_COLORS[item.category] || CATEGORY_COLORS['Autre'];
+    const categoryIcon = CATEGORY_ICONS[item.category] || CATEGORY_ICONS['Autre'];
 
     return (
       <TouchableOpacity style={styles.expenseCard} onPress={() => openModal(item)}>

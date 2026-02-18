@@ -72,3 +72,14 @@ export const machineColors = {
   VENTE_MATERIAU: colors.neutral[600],
   PLIAGE: colors.warning[600],
 };
+
+export const expenseCategoryColors: Record<string, string> = {
+  'Matériel': '#0066cc',
+  'Fournitures': '#28a745',
+  'Transport': '#856404',
+  'Maintenance': '#6f42c1',
+  'Salaires': '#17a2b8',
+  'Loyer': '#fd7e14',
+  'Électricité': '#d39e00',
+  'Autre': '#6c757d',
+};

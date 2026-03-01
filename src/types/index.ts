@@ -50,6 +50,17 @@ export interface Material {
   updatedAt: string;
 }
 
+export interface MaintenanceMaterial {
+  id: string;
+  name: string;
+  pricePerUnit: number;
+  unit: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface FixedService {
   id: string;
   name: string;
@@ -94,6 +105,8 @@ export interface DevisLine {
   createdAt: string;
   materialId?: string;
   material?: Material;
+  maintenanceMaterialId?: string;
+  maintenanceMaterial?: MaintenanceMaterial;
 }
 
 export interface DevisServiceItem {
@@ -136,28 +149,11 @@ export interface AddDevisLineInput {
   quantity?: number;
   unitPrice?: number;
   materialId?: string;
+  maintenanceMaterialId?: string;
   serviceId?: string;
   width?: number;
   height?: number;
   dimensionUnit?: string;
-}
-
-export interface DevisLine {
-  id: string;
-  machineType: MachineType;
-  description?: string;
-  minutes?: number;
-  meters?: number;
-  quantity?: number;
-  unitPrice: number;
-  materialCost: number;
-  lineTotal: number;
-  width?: number;
-  height?: number;
-  dimensionUnit?: string;
-  createdAt: string;
-  materialId?: string;
-  material?: Material;
 }
 
 // Admin types

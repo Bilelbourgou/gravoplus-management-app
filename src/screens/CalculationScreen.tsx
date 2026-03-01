@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Activi
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { devisApi, materialsApi, servicesApi } from '../services';
+import { devisApi, materialsApi, maintenanceMaterialsApi, servicesApi } from '../services';
 import { useAuthStore } from '../store/auth.store';
 import { colors, machineColors } from '../theme/colors';
-import type { Material, MachineType, DevisLine, FixedService } from '../types';
+import type { Material, MaintenanceMaterial, MachineType, DevisLine, FixedService } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
 
 type Props = {
@@ -37,16 +37,20 @@ export function CalculationScreen({ navigation, route }: Props) {
 
   const [description, setDescription] = useState('');
   const [materialId, setMaterialId] = useState<string | undefined>();
+  const [maintenanceMaterialId, setMaintenanceMaterialId] = useState<string | undefined>();
   const [serviceId, setServiceId] = useState<string | undefined>();
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [maintenanceMaterials, setMaintenanceMaterials] = useState<MaintenanceMaterial[]>([]);
   const [services, setServices] = useState<FixedService[]>([]);
   const [lines, setLines] = useState<DevisLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLines, setLoadingLines] = useState(true);
   const [maintenanceType, setMaintenanceType] = useState<'manual' | 'material' | 'service'>('manual');
   const [materialDropdownOpen, setMaterialDropdownOpen] = useState(false);
+  const [maintenanceMaterialDropdownOpen, setMaintenanceMaterialDropdownOpen] = useState(false);
 
   const selectedMaterial = materials.find(m => m.id === materialId);
+  const selectedMaintenanceMaterial = maintenanceMaterials.find(m => m.id === maintenanceMaterialId);
 
   const MaterialDropdown = ({ label, showPrice, showNone, filterActive = true }: { label: string; showPrice?: boolean; showNone?: boolean; filterActive?: boolean }) => {
     const filteredMaterials = filterActive ? materials.filter(m => m.isActive) : materials;
@@ -112,15 +116,70 @@ export function CalculationScreen({ navigation, route }: Props) {
     );
   };
 
+  const MaintenanceMaterialDropdown = () => {
+    const filteredMats = maintenanceMaterials.filter(m => m.isActive);
+    return (
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Matériau maintenance *</Text>
+        <TouchableOpacity
+          style={styles.dropdownTrigger}
+          onPress={() => setMaintenanceMaterialDropdownOpen(true)}
+        >
+          <Text style={selectedMaintenanceMaterial ? styles.dropdownTriggerText : styles.dropdownPlaceholderText}>
+            {selectedMaintenanceMaterial
+              ? `${selectedMaintenanceMaterial.name} — ${Number(selectedMaintenanceMaterial.pricePerUnit).toFixed(2)} TND/${selectedMaintenanceMaterial.unit}`
+              : 'Sélectionner un matériau maintenance'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={colors.text.muted} />
+        </TouchableOpacity>
+
+        <Modal visible={maintenanceMaterialDropdownOpen} transparent animationType="fade">
+          <TouchableOpacity
+            style={styles.dropdownOverlay}
+            activeOpacity={1}
+            onPress={() => setMaintenanceMaterialDropdownOpen(false)}
+          >
+            <View style={styles.dropdownModal}>
+              <Text style={styles.dropdownModalTitle}>Matériau maintenance</Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {filteredMats.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.dropdownItem, maintenanceMaterialId === m.id && styles.dropdownItemSelected]}
+                    onPress={() => { setMaintenanceMaterialId(m.id); setMaintenanceMaterialDropdownOpen(false); }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.dropdownItemText, maintenanceMaterialId === m.id && styles.dropdownItemTextSelected]}>
+                        {m.name}
+                      </Text>
+                      <Text style={styles.dropdownItemPrice}>
+                        {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
+                      </Text>
+                    </View>
+                    {maintenanceMaterialId === m.id && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </View>
+    );
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU' || machineType === 'SERVICE_MAINTENANCE' || machineType === 'PLIAGE') {
+        if (machineType === 'LASER' || machineType === 'CNC' || machineType === 'VENTE_MATERIAU' || machineType === 'PLIAGE') {
           const mats = await materialsApi.getAll();
           setMaterials(mats);
         }
         if (machineType === 'SERVICE_MAINTENANCE') {
-          const srvs = await servicesApi.getAll();
+          const [maintMats, srvs] = await Promise.all([
+            maintenanceMaterialsApi.getAll(),
+            servicesApi.getAll(),
+          ]);
+          setMaintenanceMaterials(maintMats);
           setServices(srvs);
         }
         const devis = await devisApi.getById(devisId);
@@ -144,6 +203,7 @@ export function CalculationScreen({ navigation, route }: Props) {
     setDimensionUnit('m');
     setDescription('');
     setMaterialId(undefined);
+    setMaintenanceMaterialId(undefined);
     setServiceId(undefined);
     setMaintenanceType('manual');
   };
@@ -178,7 +238,8 @@ export function CalculationScreen({ navigation, route }: Props) {
       width: width ? parseFloat(width) : undefined,
       height: height ? parseFloat(height) : undefined,
       dimensionUnit,
-      materialId,
+      materialId: machineType === 'SERVICE_MAINTENANCE' ? undefined : materialId,
+      maintenanceMaterialId: machineType === 'SERVICE_MAINTENANCE' ? maintenanceMaterialId : undefined,
       serviceId,
     });
     return true;
@@ -464,13 +525,13 @@ export function CalculationScreen({ navigation, route }: Props) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.typeButton, maintenanceType === 'material' && styles.typeButtonActive]}
-                  onPress={() => { setMaintenanceType('material'); setServiceId(undefined); setUnitPrice(''); }}
+                  onPress={() => { setMaintenanceType('material'); setServiceId(undefined); setUnitPrice(''); setMaintenanceMaterialId(undefined); }}
                 >
                   <Text style={[styles.typeButtonText, maintenanceType === 'material' && styles.typeButtonTextActive]}>Matériau</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.typeButton, maintenanceType === 'service' && styles.typeButtonActive]}
-                  onPress={() => { setMaintenanceType('service'); setMaterialId(undefined); setUnitPrice(''); }}
+                  onPress={() => { setMaintenanceType('service'); setMaterialId(undefined); setMaintenanceMaterialId(undefined); setUnitPrice(''); }}
                 >
                   <Text style={[styles.typeButtonText, maintenanceType === 'service' && styles.typeButtonTextActive]}>Service</Text>
                 </TouchableOpacity>
@@ -493,7 +554,7 @@ export function CalculationScreen({ navigation, route }: Props) {
 
             {maintenanceType === 'material' && (
               <>
-                <MaterialDropdown label="Matériau *" showPrice />
+                <MaintenanceMaterialDropdown />
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Quantité</Text>
                   <TextInput

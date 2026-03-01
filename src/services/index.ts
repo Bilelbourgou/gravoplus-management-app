@@ -7,6 +7,7 @@ import {
   Devis,
   MachinePricing,
   Material,
+  MaintenanceMaterial,
   FixedService,
   MachineType,
   CreateDevisInput,
@@ -99,6 +100,25 @@ export const materialsApi = {
   },
   delete: async (id: string): Promise<void> => {
     await api.delete(`/materials/${id}`);
+  },
+};
+
+// Maintenance Materials
+export const maintenanceMaterialsApi = {
+  getAll: async (): Promise<MaintenanceMaterial[]> => {
+    const res = await api.get<ApiResponse<MaintenanceMaterial[]>>('/maintenance-materials');
+    return res.data.data!;
+  },
+  create: async (data: Omit<MaintenanceMaterial, 'id' | 'createdAt' | 'updatedAt'>): Promise<MaintenanceMaterial> => {
+    const res = await api.post<ApiResponse<MaintenanceMaterial>>('/maintenance-materials', data);
+    return res.data.data!;
+  },
+  update: async (id: string, data: Partial<MaintenanceMaterial>): Promise<MaintenanceMaterial> => {
+    const res = await api.put<ApiResponse<MaintenanceMaterial>>(`/maintenance-materials/${id}`, data);
+    return res.data.data!;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/maintenance-materials/${id}`);
   },
 };
 

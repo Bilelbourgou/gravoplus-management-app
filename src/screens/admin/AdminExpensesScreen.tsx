@@ -123,6 +123,7 @@ export function AdminExpensesScreen({ navigation }: any) {
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+  const [amountText, setAmountText] = useState('');
 
   const fetchData = async () => {
     try {
@@ -168,6 +169,7 @@ export function AdminExpensesScreen({ navigation }: any) {
         date: expense.date.split('T')[0],
         notes: expense.notes || '',
       });
+      setAmountText(String(expense.amount));
     } else {
       setEditingExpense(null);
       setFormData({
@@ -177,6 +179,7 @@ export function AdminExpensesScreen({ navigation }: any) {
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
+      setAmountText('');
     }
     setModalVisible(true);
   };
@@ -352,8 +355,11 @@ export function AdminExpensesScreen({ navigation }: any) {
                   placeholder="0.00"
                   placeholderTextColor={colors.text.muted}
                   keyboardType="decimal-pad"
-                  value={formData.amount ? String(formData.amount) : ''}
-                  onChangeText={(text) => setFormData({ ...formData, amount: parseFloat(text) || 0 })}
+                  value={amountText}
+                  onChangeText={(text) => {
+                    setAmountText(text);
+                    setFormData({ ...formData, amount: parseFloat(text.replace(',', '.')) || 0 });
+                  }}
                 />
               </View>
 

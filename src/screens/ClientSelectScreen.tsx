@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { clientsApi, devisApi } from '../services';
+import { useAuthStore } from '../store/auth.store';
 import { colors } from '../theme/colors';
 import type { Client, CreateClientInput } from '../types';
 import type { NewDevisStackParamList } from '../navigation/MainNavigator';
@@ -106,10 +107,15 @@ export function ClientSelectScreen({ navigation }: Props) {
     setModalVisible(true);
   };
 
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
+
   const handleSelectClient = async (client: Client) => {
     setCreating(true);
     try {
-      const devis = await devisApi.create({ clientId: client.id });
+      const devis = isSuperAdmin
+        ? await devisApi.create({ clientId: client.id })
+        : await devisApi.createEncaissement({ clientId: client.id });
       lastCreatedDevisId.current = devis.id;
       navigation.navigate('MachineSelect', { clientId: client.id, devisId: devis.id });
     } catch (error) {

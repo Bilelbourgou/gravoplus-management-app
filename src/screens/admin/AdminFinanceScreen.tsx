@@ -69,11 +69,6 @@ export function AdminFinanceScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  // Payment modal
-  const [paymentDevis, setPaymentDevis] = useState<CaisseDevis | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Espèces');
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   // Closure modal
@@ -135,27 +130,6 @@ export function AdminFinanceScreen({ navigation }: any) {
     } finally {
       setClosureLoading(false);
     }
-  };
-
-  const handleCreatePayment = async () => {
-    if (!paymentDevis) return;
-    const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0) { Alert.alert('Erreur', 'Montant invalide'); return; }
-    const totalPaid = (paymentDevis.payments || []).reduce((s, p) => s + Number(p.amount), 0);
-    const remaining = Number(paymentDevis.totalAmount) - totalPaid;
-    if (amount > remaining) { Alert.alert('Erreur', `Dépasse le reste (${remaining.toFixed(3)} TND)`); return; }
-    setPaymentLoading(true);
-    try {
-      await financialApi.createCaissePayment({
-        amount, devisId: paymentDevis.id, paymentMethod,
-        description: `Paiement pour devis ${paymentDevis.reference} - ${paymentDevis.client?.name || ''}`,
-      });
-      setPaymentDevis(null); setPaymentAmount('');
-      Alert.alert('Succès', 'Paiement enregistré');
-      await fetchData();
-    } catch (error: any) {
-      Alert.alert('Erreur', error?.response?.data?.message || 'Impossible d\'enregistrer');
-    } finally { setPaymentLoading(false); }
   };
 
   const handleInvoiceDevis = (devisId: string) => {
@@ -296,9 +270,7 @@ export function AdminFinanceScreen({ navigation }: any) {
               const isExpanded = expandedDevisId === devis.id;
               const totalPaid = (devis.payments || []).reduce((s, p) => s + Number(p.amount), 0);
               const totalAmount = Number(devis.totalAmount);
-              const remaining = totalAmount - totalPaid;
               const isFullyPaid = totalPaid >= totalAmount && totalAmount > 0;
-              const pct = totalAmount > 0 ? Math.min(100, (totalPaid / totalAmount) * 100) : 0;
               const statusColor = STATUS_COLORS[devis.status] || colors.text.muted;
 
               return (
@@ -320,13 +292,6 @@ export function AdminFinanceScreen({ navigation }: any) {
                           {devis.createdBy?.firstName} {devis.createdBy?.lastName}
                         </Text>
                         <Text style={styles.devisTotal}>{totalAmount.toFixed(3)} TND</Text>
-                      </View>
-                      {/* Progress bar */}
-                      <View style={styles.progressRow}>
-                        <View style={styles.progressBar}>
-                          <View style={[styles.progressFill, { width: `${pct}%` }]} />
-                        </View>
-                        <Text style={styles.progressLabel}>{totalPaid.toFixed(3)}/{totalAmount.toFixed(3)}</Text>
                       </View>
                     </View>
                     <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.text.muted} style={{ marginLeft: 8 }} />
@@ -360,25 +325,6 @@ export function AdminFinanceScreen({ navigation }: any) {
                           ))}
                         </View>
                       )}
-                      {/* Payments */}
-                      <View style={styles.expandedSection}>
-                        <Text style={styles.expandedTitle}>Paiements ({(devis.payments || []).length})</Text>
-                        {(devis.payments || []).length > 0 ? (devis.payments || []).map((p) => (
-                          <View key={p.id} style={styles.expandedRow}>
-                            <View>
-                              <Text style={styles.expandedRowText}>
-                                {p.paymentMethod || 'Espèces'} - {formatDateShort(p.paymentDate)}
-                              </Text>
-                              {p.createdBy && (
-                                <Text style={{ fontSize: 11, color: colors.text.muted }}>
-                                  par {p.createdBy.firstName} {p.createdBy.lastName}
-                                </Text>
-                              )}
-                            </View>
-                            <Text style={[styles.expandedRowAmount, { color: '#22c55e' }]}>+{Number(p.amount).toFixed(3)}</Text>
-                          </View>
-                        )) : <Text style={{ fontSize: 13, color: colors.text.muted }}>Aucun paiement</Text>}
-                      </View>
                       {devis.invoice && (
                         <View style={{ backgroundColor: '#22c55e10', borderRadius: 8, padding: 10, marginBottom: 10 }}>
                           <Text style={{ fontSize: 13, color: '#22c55e', fontWeight: '600' }}>
@@ -388,15 +334,6 @@ export function AdminFinanceScreen({ navigation }: any) {
                       )}
                       {/* Actions */}
                       <View style={styles.devisActions}>
-                        {!isFullyPaid && devis.status !== 'INVOICED' && devis.status !== 'CANCELLED' && (
-                          <TouchableOpacity
-                            style={styles.devisActionBtn}
-                            onPress={() => { setPaymentDevis(devis); setPaymentAmount(String(remaining.toFixed(3))); }}
-                          >
-                            <Ionicons name="card" size={16} color="#fff" />
-                            <Text style={styles.devisActionText}>Payer ({remaining.toFixed(3)})</Text>
-                          </TouchableOpacity>
-                        )}
                         {isFullyPaid && !devis.invoice && (
                           <TouchableOpacity
                             style={[styles.devisActionBtn, { backgroundColor: '#22c55e' }]}
@@ -561,69 +498,6 @@ export function AdminFinanceScreen({ navigation }: any) {
         )}
       </ScrollView>
 
-      {/* Payment Modal */}
-      <Modal visible={!!paymentDevis} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Paiement - {paymentDevis?.reference}</Text>
-              <TouchableOpacity onPress={() => { setPaymentDevis(null); setPaymentAmount(''); }}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: 20 }} keyboardShouldPersistTaps="handled">
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentInfoLabel}>Client</Text>
-                <Text style={styles.paymentInfoValue}>{paymentDevis?.client?.name}</Text>
-              </View>
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentInfoLabel}>Reste à payer</Text>
-                <Text style={[styles.paymentInfoValue, { color: '#ef4444' }]}>
-                  {paymentDevis ? (Number(paymentDevis.totalAmount) - (paymentDevis.payments || []).reduce((s, p) => s + Number(p.amount), 0)).toFixed(3) : '0'} TND
-                </Text>
-              </View>
-              <View style={{ marginBottom: 16 }}>
-                <Text style={styles.formLabel}>Montant (TND)</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="0.000"
-                  placeholderTextColor={colors.text.muted}
-                  keyboardType="decimal-pad"
-                  value={paymentAmount}
-                  onChangeText={setPaymentAmount}
-                />
-              </View>
-              <View style={{ marginBottom: 16 }}>
-                <Text style={styles.formLabel}>Méthode de paiement</Text>
-                <View style={styles.methodRow}>
-                  {['Espèces', 'Chèque', 'Virement'].map((m) => (
-                    <TouchableOpacity
-                      key={m}
-                      style={[styles.methodChip, paymentMethod === m && styles.methodChipActive]}
-                      onPress={() => setPaymentMethod(m)}
-                    >
-                      <Text style={[styles.methodChipText, paymentMethod === m && styles.methodChipTextActive]}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </ScrollView>
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setPaymentDevis(null); setPaymentAmount(''); }}>
-                <Text style={styles.cancelBtnText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmBtn, paymentLoading && { opacity: 0.7 }]}
-                onPress={handleCreatePayment}
-                disabled={paymentLoading}
-              >
-                {paymentLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>Enregistrer</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Closure Modal */}
       <Modal visible={closureModalVisible} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
@@ -735,10 +609,6 @@ const styles = StyleSheet.create({
   devisTotal: { fontSize: 15, fontWeight: '700', color: colors.primary[500] },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusBadgeText: { fontSize: 11, fontWeight: '600' },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  progressBar: { flex: 1, height: 5, backgroundColor: colors.background.elevated, borderRadius: 3 },
-  progressFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  progressLabel: { fontSize: 11, color: colors.text.muted },
   // Expanded panel
   expandedPanel: { padding: 14, borderTopWidth: 1, borderTopColor: colors.border.subtle, backgroundColor: colors.background.elevated },
   expandedSection: { marginBottom: 14 },

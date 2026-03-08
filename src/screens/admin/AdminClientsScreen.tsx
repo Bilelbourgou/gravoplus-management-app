@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { clientsApi, invoicesApi, financialApi } from '../../services';
 import { colors } from '../../theme/colors';
-import type { Client, CreateClientInput, ClientBalanceData, ClientBalanceDevis, CreateCaissePaymentData } from '../../types';
+import type { Client, CreateClientInput, ClientBalanceData, CreateCaissePaymentData } from '../../types';
 import type { AdminStackParamList } from '../../navigation/MainNavigator';
 
 export function AdminClientsScreen() {
@@ -37,9 +37,9 @@ export function AdminClientsScreen() {
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [selectedClientForInvoice, setSelectedClientForInvoice] = useState<Client | null>(null);
 
-  // Devis-based payment state
+  // Payment state
   const [expandedDevisId, setExpandedDevisId] = useState<string | null>(null);
-  const [paymentDevis, setPaymentDevis] = useState<ClientBalanceDevis | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Espèces');
   const [paymentReference, setPaymentReference] = useState('');
@@ -175,7 +175,7 @@ export function AdminClientsScreen() {
   };
 
   const resetPaymentForm = () => {
-    setPaymentDevis(null);
+    setShowPaymentForm(false);
     setPaymentAmount('');
     setPaymentMethod('Espèces');
     setPaymentReference('');
@@ -183,32 +183,29 @@ export function AdminClientsScreen() {
   };
 
   const handleAddPayment = async () => {
-    if (!paymentDevis) return;
+    if (!selectedClientForInvoice || !balanceData) return;
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
       Alert.alert('Erreur', 'Montant invalide');
       return;
     }
-    if (amount > paymentDevis.remaining) {
-      Alert.alert('Erreur', `Le montant dépasse le reste à payer (${paymentDevis.remaining.toFixed(3)} TND)`);
+    const outstanding = balanceData.summary.outstandingBalance;
+    if (amount > outstanding) {
+      Alert.alert('Erreur', `Le montant dépasse le reste à payer (${outstanding.toFixed(3)} TND)`);
       return;
     }
     setPaymentLoading(true);
     try {
-      await financialApi.createCaissePayment({
+      await financialApi.createClientPayment(selectedClientForInvoice.id, {
         amount,
-        devisId: paymentDevis.id,
         paymentMethod,
         reference: paymentReference || undefined,
         notes: paymentNotes || undefined,
-        description: `Paiement pour devis ${paymentDevis.reference}`,
       });
       resetPaymentForm();
       Alert.alert('Succès', 'Paiement enregistré');
-      if (selectedClientForInvoice) {
-        const data = await clientsApi.getBalance(selectedClientForInvoice.id);
-        setBalanceData(data);
-      }
+      const data = await clientsApi.getBalance(selectedClientForInvoice.id);
+      setBalanceData(data);
     } catch (error: any) {
       Alert.alert('Erreur', error?.response?.data?.message || 'Impossible d\'enregistrer le paiement');
     } finally {
@@ -434,12 +431,12 @@ export function AdminClientsScreen() {
         >
           <View style={styles.balanceModalContent}>
             <View style={styles.modalHeader}>
-              {paymentDevis ? (
+              {showPaymentForm ? (
                 <>
                   <TouchableOpacity onPress={resetPaymentForm} style={{ marginRight: 10 }}>
                     <Ionicons name="arrow-back" size={22} color={colors.text.primary} />
                   </TouchableOpacity>
-                  <Text style={[styles.modalTitle, { flex: 1 }]}>Paiement — {paymentDevis.reference}</Text>
+                  <Text style={[styles.modalTitle, { flex: 1 }]}>Paiement — {selectedClientForInvoice?.name || ''}</Text>
                 </>
               ) : (
                 <Text style={styles.modalTitle}>
@@ -455,51 +452,33 @@ export function AdminClientsScreen() {
               <View style={styles.balanceLoading}>
                 <ActivityIndicator size="large" color={colors.primary[500]} />
               </View>
-            ) : paymentDevis ? (
+            ) : showPaymentForm && balanceData ? (
               /* ── Inline Payment Form ── */
               <>
                 <ScrollView style={styles.balanceBody} keyboardShouldPersistTaps="handled">
                   {/* Payment summary */}
                   <View style={styles.paymentSummaryCard}>
                     <View style={styles.paymentSummaryItem}>
-                      <Text style={styles.paymentSummaryLabel}>Montant total</Text>
-                      <Text style={styles.paymentSummaryValue}>{Number(paymentDevis.totalAmount).toFixed(3)} TND</Text>
+                      <Text style={styles.paymentSummaryLabel}>Total devis</Text>
+                      <Text style={styles.paymentSummaryValue}>{Number(balanceData.summary.totalDevisAmount).toFixed(3)} TND</Text>
                     </View>
                     <View style={styles.paymentSummaryItem}>
                       <Text style={styles.paymentSummaryLabel}>Déjà payé</Text>
-                      <Text style={[styles.paymentSummaryValue, { color: '#22c55e' }]}>{Number(paymentDevis.paidAmount).toFixed(3)} TND</Text>
+                      <Text style={[styles.paymentSummaryValue, { color: '#22c55e' }]}>{Number(balanceData.summary.totalPaid).toFixed(3)} TND</Text>
                     </View>
                     <View style={[styles.paymentSummaryItem, styles.paymentSummaryTotal]}>
                       <Text style={[styles.paymentSummaryLabel, { fontWeight: '600' }]}>Reste à payer</Text>
-                      <Text style={[styles.paymentSummaryValue, { color: '#ef4444', fontSize: 18 }]}>{Number(paymentDevis.remaining).toFixed(3)} TND</Text>
+                      <Text style={[styles.paymentSummaryValue, { color: '#ef4444', fontSize: 18 }]}>{Number(balanceData.summary.outstandingBalance).toFixed(3)} TND</Text>
                     </View>
                   </View>
 
-                  {/* Payment history */}
-                  {(paymentDevis.payments || []).length > 0 && (
-                    <View style={styles.paymentHistorySection}>
-                      <Text style={styles.expandedTitle}>Historique des paiements</Text>
-                      {(paymentDevis.payments || []).map((p) => (
-                        <View key={p.id} style={styles.expandedRow}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.expandedRowText}>
-                              {p.paymentMethod || 'Espèces'} — {new Date(p.paymentDate).toLocaleDateString('fr-FR')}
-                            </Text>
-                            {p.createdBy && (
-                              <Text style={{ fontSize: 11, color: colors.text.muted }}>
-                                par {p.createdBy.firstName} {p.createdBy.lastName}
-                              </Text>
-                            )}
-                          </View>
-                          <Text style={[styles.expandedRowAmount, { color: '#22c55e' }]}>+{Number(p.amount).toFixed(3)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+                  <Text style={{ fontSize: 12, color: colors.text.muted, marginBottom: 12, paddingHorizontal: 4 }}>
+                    Le paiement sera réparti automatiquement sur les devis en attente.
+                  </Text>
 
                   {/* Amount */}
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Montant * <Text style={{ fontWeight: '400', color: colors.text.muted }}>(max: {Number(paymentDevis.remaining).toFixed(3)} TND)</Text></Text>
+                    <Text style={styles.label}>Montant * <Text style={{ fontWeight: '400', color: colors.text.muted }}>(max: {Number(balanceData.summary.outstandingBalance).toFixed(3)} TND)</Text></Text>
                     <TextInput
                       style={styles.input}
                       placeholder="0.000"
@@ -508,8 +487,8 @@ export function AdminClientsScreen() {
                       value={paymentAmount}
                       onChangeText={setPaymentAmount}
                     />
-                    {parseFloat(paymentAmount) > paymentDevis.remaining && (
-                      <Text style={styles.formError}>Le montant dépasse le reste à payer ({Number(paymentDevis.remaining).toFixed(3)} TND)</Text>
+                    {parseFloat(paymentAmount) > balanceData.summary.outstandingBalance && (
+                      <Text style={styles.formError}>Le montant dépasse le reste à payer ({Number(balanceData.summary.outstandingBalance).toFixed(3)} TND)</Text>
                     )}
                   </View>
 
@@ -561,9 +540,9 @@ export function AdminClientsScreen() {
                     <Text style={styles.cancelButtonText}>Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.saveButton, (paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) > paymentDevis.remaining) && styles.buttonDisabled]}
+                    style={[styles.saveButton, (paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) > balanceData.summary.outstandingBalance) && styles.buttonDisabled]}
                     onPress={handleAddPayment}
-                    disabled={paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > paymentDevis.remaining}
+                    disabled={paymentLoading || !parseFloat(paymentAmount) || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > balanceData.summary.outstandingBalance}
                   >
                     {paymentLoading ? (
                       <ActivityIndicator color="#fff" />
@@ -608,11 +587,22 @@ export function AdminClientsScreen() {
                       {Number(balanceData.summary.outstandingBalance || 0).toFixed(2)} TND
                     </Text>
                   </View>
-                  <Ionicons 
-                    name={balanceData.summary.outstandingBalance > 0 ? 'alert-circle' : 'checkmark-circle'} 
-                    size={32} 
-                    color={balanceData.summary.outstandingBalance > 0 ? '#ef4444' : '#22c55e'} 
-                  />
+                  <View style={{ alignItems: 'center' }}>
+                    <Ionicons 
+                      name={balanceData.summary.outstandingBalance > 0 ? 'alert-circle' : 'checkmark-circle'} 
+                      size={32} 
+                      color={balanceData.summary.outstandingBalance > 0 ? '#ef4444' : '#22c55e'} 
+                    />
+                    {balanceData.summary.outstandingBalance > 0 && (
+                      <TouchableOpacity
+                        style={[styles.devisActionBtn, { marginTop: 8 }]}
+                        onPress={() => { setShowPaymentForm(true); setPaymentAmount(''); setPaymentMethod('Espèces'); setPaymentReference(''); setPaymentNotes(''); }}
+                      >
+                        <Ionicons name="card" size={16} color="#fff" />
+                        <Text style={styles.devisActionText}>Payer</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
 
                 {/* Devis List */}
@@ -644,15 +634,6 @@ export function AdminClientsScreen() {
                             </Text>
                             <Text style={styles.devisAmount}>
                               {Number(devis.totalAmount).toFixed(2)} TND
-                            </Text>
-                          </View>
-                          {/* Payment progress */}
-                          <View style={styles.devisProgress}>
-                            <View style={styles.devisProgressBar}>
-                              <View style={[styles.devisProgressFill, { width: `${devis.totalAmount > 0 ? Math.min(100, (devis.paidAmount / devis.totalAmount) * 100) : 0}%` }]} />
-                            </View>
-                            <Text style={styles.devisProgressText}>
-                              {Number(devis.paidAmount).toFixed(2)} / {Number(devis.totalAmount).toFixed(2)}
                             </Text>
                           </View>
                         </View>
@@ -725,15 +706,6 @@ export function AdminClientsScreen() {
 
                           {/* Actions */}
                           <View style={styles.devisActions}>
-                            {!devis.isFullyPaid && devis.status !== 'INVOICED' && (
-                              <TouchableOpacity
-                                style={styles.devisActionBtn}
-                                onPress={() => { setPaymentDevis(devis); setPaymentAmount(String(devis.remaining.toFixed(3))); setPaymentMethod('Espèces'); setPaymentReference(''); setPaymentNotes(''); }}
-                              >
-                                <Ionicons name="card" size={16} color="#fff" />
-                                <Text style={styles.devisActionText}>Payer</Text>
-                              </TouchableOpacity>
-                            )}
                             {devis.isFullyPaid && !devis.invoice && (
                               <TouchableOpacity
                                 style={[styles.devisActionBtn, { backgroundColor: '#22c55e' }]}
@@ -885,10 +857,6 @@ const styles = StyleSheet.create({
   },
   devisStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   devisStatusText: { fontSize: 11, fontWeight: '600' },
-  devisProgress: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  devisProgressBar: { flex: 1, height: 5, backgroundColor: colors.background.base, borderRadius: 3 },
-  devisProgressFill: { height: '100%', backgroundColor: '#22c55e', borderRadius: 3 },
-  devisProgressText: { fontSize: 11, color: colors.text.muted },
   devisExpanded: { padding: 14, borderTopWidth: 1, borderTopColor: colors.border.subtle, backgroundColor: colors.background.surface },
   expandedSection: { marginBottom: 14 },
   expandedTitle: { fontSize: 13, fontWeight: '600', color: colors.text.secondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },

@@ -180,6 +180,18 @@ export const devisApi = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/devis/${id}`);
   },
+  createEncaissement: async (data: CreateDevisInput): Promise<Devis> => {
+    const res = await api.post<ApiResponse<Devis>>('/devis/encaissement', data);
+    return res.data.data!;
+  },
+  finalizeEncaissement: async (id: string, paymentMethod?: string): Promise<Devis> => {
+    const res = await api.post<ApiResponse<Devis>>(`/devis/${id}/finalize`, { paymentMethod });
+    return res.data.data!;
+  },
+  updateAcompte: async (id: string, acompte: number): Promise<Devis> => {
+    const res = await api.patch<ApiResponse<Devis>>(`/devis/${id}/acompte`, { acompte });
+    return res.data.data!;
+  },
 };
 
 // Dashboard (Admin)
@@ -289,6 +301,10 @@ export const financialApi = {
   },
   createCaissePayment: async (data: CreateCaissePaymentData) => {
     const res = await api.post<ApiResponse<any>>('/payments/caisse', data);
+    return res.data.data!;
+  },
+  createClientPayment: async (clientId: string, data: CreateCaissePaymentData) => {
+    const res = await api.post<ApiResponse<any>>(`/payments/client/${clientId}`, data);
     return res.data.data!;
   },
   createClosure: async (notes?: string): Promise<FinancialClosure> => {

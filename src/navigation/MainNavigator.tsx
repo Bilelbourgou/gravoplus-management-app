@@ -228,7 +228,7 @@ export function MainNavigator() {
       <Tab.Screen
         name="NewDevisTab"
         component={NewDevisNavigator}
-        options={{ tabBarLabel: 'Nouveau devis' }}
+        options={{ tabBarLabel: user?.role === 'SUPERADMIN' ? 'Nouveau devis' : 'Encaissement' }}
       />
       {isAdmin && (
         <Tab.Screen

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -20,30 +20,58 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
   const { user } = useAuthStore();
   const [devis, setDevis] = useState<Devis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [acompte, setAcompte] = useState('');
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
 
   useEffect(() => {
-    devisApi.getById(devisId).then(setDevis).catch(console.error).finally(() => setLoading(false));
+    devisApi.getById(devisId).then((d) => {
+      setDevis(d);
+      if (Number(d.acompte) > 0) setAcompte(String(Number(d.acompte)));
+    }).catch(console.error).finally(() => setLoading(false));
   }, [devisId]);
+
+  const isEncaissement = devis?.type === 'ENCAISSEMENT';
 
   const handleDone = async () => {
     setLoading(true);
     try {
-      // Automatic Validation
-      await devisApi.validate(devisId);
-      
-      Alert.alert('Succès', 'Le devis a été créé et validé avec succès!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.dispatch(
-              CommonActions.reset({ index: 0, routes: [{ name: 'ClientSelect' }] })
-            );
+      if (isEncaissement) {
+        // Finalize encaissement: validate + auto-create payment to Caisse
+        await devisApi.finalizeEncaissement(devisId);
+        Alert.alert('Succès', 'L\'encaissement a été finalisé avec succès!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.dispatch(
+                CommonActions.reset({ index: 0, routes: [{ name: 'ClientSelect' }] })
+              );
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        // Save acompte before validation if SuperAdmin set one
+        const acompteVal = parseFloat(acompte) || 0;
+        if (isSuperAdmin && acompteVal > 0) {
+          await devisApi.updateAcompte(devisId, acompteVal);
+        }
+        // Standard devis validation
+        await devisApi.validate(devisId);
+        Alert.alert('Succès', 'Le devis a été créé et validé avec succès!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.dispatch(
+                CommonActions.reset({ index: 0, routes: [{ name: 'ClientSelect' }] })
+              );
+            },
+          },
+        ]);
+      }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de valider le devis. Veuillez informer un administrateur.');
+      Alert.alert('Erreur', isEncaissement 
+        ? 'Impossible de finaliser l\'encaissement.' 
+        : 'Impossible de valider le devis. Veuillez informer un administrateur.');
     } finally {
       setLoading(false);
     }
@@ -111,6 +139,20 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
             <Text style={styles.totalAmount}>{Number(devis.totalAmount).toFixed(2)} TND</Text>
           </View>
         )}
+
+        {isSuperAdmin && !isEncaissement && devis.status === 'DRAFT' && (
+          <View style={styles.acompteSection}>
+            <Text style={styles.acompteLabel}>Acompte (TND)</Text>
+            <TextInput
+              style={styles.acompteInput}
+              placeholder="0.000"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="decimal-pad"
+              value={acompte}
+              onChangeText={setAcompte}
+            />
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -119,8 +161,8 @@ export function DevisSummaryScreen({ navigation, route }: Props) {
           <Text style={styles.addMoreText}>Ajouter</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-          <Ionicons name="checkmark" size={20} color="#fff" />
-          <Text style={styles.doneButtonText}>Terminer</Text>
+          <Ionicons name={isEncaissement ? "wallet" : "checkmark"} size={20} color="#fff" />
+          <Text style={styles.doneButtonText}>{isEncaissement ? 'Finaliser' : 'Terminer'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -162,6 +204,15 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: 18, color: colors.text.secondary },
   totalAmount: { fontSize: 28, fontWeight: '700', color: colors.primary[400] },
+  acompteSection: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 16, backgroundColor: colors.background.surface, padding: 16, borderRadius: 12,
+  },
+  acompteLabel: { fontSize: 16, fontWeight: '600', color: colors.text.secondary },
+  acompteInput: {
+    backgroundColor: colors.background.elevated, borderRadius: 10, paddingHorizontal: 16,
+    paddingVertical: 10, fontSize: 16, color: colors.text.primary, minWidth: 120, textAlign: 'right',
+  },
   footer: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: colors.border.subtle },
   addMoreButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

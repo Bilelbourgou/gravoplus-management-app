@@ -1,6 +1,7 @@
 export type UserRole = 'ADMIN' | 'SUPERADMIN' | 'EMPLOYEE';
 export type MachineType = 'CNC' | 'LASER' | 'CHAMPS' | 'PANNEAUX' | 'SERVICE_MAINTENANCE' | 'VENTE_MATERIAU' | 'PLIAGE';
 export type DevisStatus = 'DRAFT' | 'VALIDATED' | 'INVOICED' | 'CANCELLED';
+export type DevisType = 'DEVIS' | 'ENCAISSEMENT';
 
 export interface User {
   id: string;
@@ -74,8 +75,10 @@ export interface FixedService {
 export interface Devis {
   id: string;
   reference: string;
+  type?: DevisType;
   status: DevisStatus;
   totalAmount: number;
+  acompte?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;

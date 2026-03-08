@@ -127,18 +127,28 @@ export function AdminExpensesScreen({ navigation }: any) {
 
   const fetchData = async () => {
     try {
-      const [expensesData, categoriesData] = await Promise.all([
+      // Load categories independently so they're available even if expenses fail
+      const [expensesResult, categoriesResult] = await Promise.allSettled([
         expensesApi.getAll(),
         expenseCategoriesApi.getAll(),
       ]);
-      setExpenses(expensesData);
-      setCategories(categoriesData);
-      const total = expensesData.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-      setTotalExpenses(total);
 
-      // Set default category if not set
-      if (!formData.category && categoriesData.length > 0) {
-        setFormData(prev => ({ ...prev, category: categoriesData[0].name }));
+      if (expensesResult.status === 'fulfilled') {
+        setExpenses(expensesResult.value);
+        const total = expensesResult.value.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+        setTotalExpenses(total);
+      } else {
+        console.error('Failed to load expenses:', expensesResult.reason);
+      }
+
+      if (categoriesResult.status === 'fulfilled') {
+        setCategories(categoriesResult.value);
+        // Set default category if not set
+        if (!formData.category && categoriesResult.value.length > 0) {
+          setFormData(prev => ({ ...prev, category: categoriesResult.value[0].name }));
+        }
+      } else {
+        console.error('Failed to load categories:', categoriesResult.reason);
       }
     } catch (error) {
       console.error(error);
@@ -193,6 +203,10 @@ export function AdminExpensesScreen({ navigation }: any) {
       Alert.alert('Erreur', 'Le montant doit être supérieur à 0');
       return;
     }
+    if (!formData.category) {
+      Alert.alert('Erreur', 'La catégorie est obligatoire');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -203,8 +217,9 @@ export function AdminExpensesScreen({ navigation }: any) {
       }
       setModalVisible(false);
       fetchData();
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder la dépense');
+    } catch (error: any) {
+      const msg = error?.message || 'Impossible de sauvegarder la dépense';
+      Alert.alert('Erreur', msg);
     } finally {
       setSaving(false);
     }

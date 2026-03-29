@@ -24,6 +24,7 @@ import {
   AdminExpensesScreen,
   AdminFinanceScreen,
   ExpenseCategoryScreen,
+  AdminMaterialCategoriesScreen,
 } from '../screens/admin';
 
 export type MainTabParamList = {
@@ -43,6 +44,7 @@ export type AdminStackParamList = {
   AdminExpenses: undefined;
   AdminFinance: undefined;
   AdminExpenseCategories: undefined;
+  AdminMaterialCategories: undefined;
 };
 
 export type NewDevisStackParamList = {
@@ -171,6 +173,11 @@ function AdminNavigator() {
       <AdminStack.Screen
         name="AdminExpenseCategories"
         component={ExpenseCategoryScreen}
+        options={{ headerShown: false }}
+      />
+      <AdminStack.Screen
+        name="AdminMaterialCategories"
+        component={AdminMaterialCategoriesScreen}
         options={{ headerShown: false }}
       />
     </AdminStack.Navigator>

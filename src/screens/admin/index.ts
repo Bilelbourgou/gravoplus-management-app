@@ -7,3 +7,4 @@ export { AdminInvoicesScreen } from './AdminInvoicesScreen';
 export { AdminExpensesScreen } from './AdminExpensesScreen';
 export { AdminFinanceScreen } from './AdminFinanceScreen';
 export { ExpenseCategoryScreen } from './ExpenseCategoryScreen';
+export { AdminMaterialCategoriesScreen } from './AdminMaterialCategoriesScreen';

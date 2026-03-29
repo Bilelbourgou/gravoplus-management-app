@@ -79,35 +79,58 @@ export function CalculationScreen({ navigation, route }: Props) {
           >
             <View style={styles.dropdownModal}>
               <Text style={styles.dropdownModalTitle}>{label}</Text>
-              {showNone && (
-                <TouchableOpacity
-                  style={[styles.dropdownItem, !materialId && styles.dropdownItemSelected]}
-                  onPress={() => { setMaterialId(undefined); setMaterialDropdownOpen(false); }}
-                >
-                  <Text style={[styles.dropdownItemText, !materialId && styles.dropdownItemTextSelected]}>Aucun</Text>
-                  {!materialId && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
-                </TouchableOpacity>
-              )}
-              <ScrollView style={{ maxHeight: 300 }}>
-                {filteredMaterials.map((m) => (
+              <ScrollView style={{ maxHeight: 400 }}>
+                {showNone && (
                   <TouchableOpacity
-                    key={m.id}
-                    style={[styles.dropdownItem, materialId === m.id && styles.dropdownItemSelected]}
-                    onPress={() => { setMaterialId(m.id); setMaterialDropdownOpen(false); }}
+                    style={[styles.dropdownItem, !materialId && styles.dropdownItemSelected]}
+                    onPress={() => { setMaterialId(undefined); setMaterialDropdownOpen(false); }}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.dropdownItemText, materialId === m.id && styles.dropdownItemTextSelected]}>
-                        {m.name}
-                      </Text>
-                      {showPrice && (
-                        <Text style={styles.dropdownItemPrice}>
-                          {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
-                        </Text>
-                      )}
-                    </View>
-                    {materialId === m.id && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
+                    <Text style={[styles.dropdownItemText, !materialId && styles.dropdownItemTextSelected]}>Aucun</Text>
+                    {!materialId && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
                   </TouchableOpacity>
-                ))}
+                )}
+                
+                {(() => {
+                  const groupedMaterials: Record<string, Material[]> = {};
+                  filteredMaterials.forEach(m => {
+                    const catName = m.category?.name || 'Autres';
+                    if (!groupedMaterials[catName]) groupedMaterials[catName] = [];
+                    groupedMaterials[catName].push(m);
+                  });
+
+                  const categoryNames = Object.keys(groupedMaterials).sort((a, b) => {
+                    if (a === 'Autres') return 1;
+                    if (b === 'Autres') return -1;
+                    return a.localeCompare(b);
+                  });
+
+                  return categoryNames.map(catName => (
+                    <View key={catName}>
+                      <View style={styles.categoryHeader}>
+                        <Text style={styles.categoryHeaderText}>{catName}</Text>
+                      </View>
+                      {groupedMaterials[catName].map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={[styles.dropdownItem, materialId === m.id && styles.dropdownItemSelected]}
+                          onPress={() => { setMaterialId(m.id); setMaterialDropdownOpen(false); }}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.dropdownItemText, materialId === m.id && styles.dropdownItemTextSelected]}>
+                              {m.name}
+                            </Text>
+                            {showPrice && (
+                              <Text style={styles.dropdownItemPrice}>
+                                {Number(m.pricePerUnit).toFixed(2)} TND/{m.unit}
+                              </Text>
+                            )}
+                          </View>
+                          {materialId === m.id && <Ionicons name="checkmark" size={20} color={colors.primary[500]} />}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ));
+                })()}
               </ScrollView>
             </View>
           </TouchableOpacity>
@@ -923,17 +946,24 @@ const styles = StyleSheet.create({
   dropdownItemSelected: {
     backgroundColor: colors.primary[500] + '15',
   },
-  dropdownItemText: {
-    fontSize: 16,
-    color: colors.text.primary,
+  dropdownItemPrice: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
+  categoryHeader: {
+    backgroundColor: colors.background.elevated,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
   },
+  categoryHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary[500],
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  dropdownItemText: { fontSize: 16, color: colors.text.primary },
   dropdownItemTextSelected: {
     color: colors.primary[500],
     fontWeight: '600',
-  },
-  dropdownItemPrice: {
-    fontSize: 13,
-    color: colors.text.muted,
-    marginTop: 2,
   },
 });

@@ -47,6 +47,8 @@ export interface Material {
   unit: string;
   description?: string;
   isActive: boolean;
+  categoryId?: string;
+  category?: MaterialCategory;
   createdAt: string;
   updatedAt: string;
 }
@@ -225,6 +227,16 @@ export interface ExpenseCategory {
   updatedAt: string;
 }
 
+export interface MaterialCategory {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  _count?: { materials: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Expense {
   id: string;
   description: string;
@@ -395,6 +407,11 @@ export interface FinancialStats {
     employeeName: string;
     totalAmount: number;
     paymentCount: number;
+  }>;
+  productivityByMachine: Array<{
+    machine: string;
+    totalAmount: number;
+    count: number;
   }>;
 }
 

@@ -17,13 +17,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, statusColors, expenseCategoryColors } from '../../theme/colors';
-import { financialApi, invoicesApi } from '../../services';
+import { financialApi, invoicesApi, devisApi } from '../../services';
 import { useAuthStore } from '../../store/auth.store';
 import type { FinancialStats, CaisseDevis, FinancialClosure, DashboardStats, DevisStatus, ExpenseCategory } from '../../types';
 
 const { width } = Dimensions.get('window');
 
-type TabKey = 'devis' | 'recettes' | 'employees' | 'depenses' | 'historique';
+type TabKey = 'devis' | 'recettes' | 'employees' | 'machines' | 'depenses' | 'historique';
 
 const formatCurrency = (amount: number) => `${amount.toFixed(3)} TND`;
 
@@ -113,8 +113,11 @@ export function AdminFinanceScreen({ navigation }: any) {
   }, [caisseDevis, statusFilter, searchQuery]);
 
   const devisSummary = useMemo(() => {
-    const total = caisseDevis.reduce((s, d) => s + Number(d.totalAmount), 0);
-    return { total, count: caisseDevis.length };
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('fr-FR');
+    const todayList = caisseDevis; // Now already filtered by session in backend
+    const total = todayList.reduce((s, d) => s + Number(d.totalAmount), 0);
+    return { total, count: todayList.length };
   }, [caisseDevis]);
 
   const handleClosePeriod = async () => {
@@ -148,6 +151,31 @@ export function AdminFinanceScreen({ navigation }: any) {
     ]);
   };
 
+  const handleDeleteDevis = (devisId: string, reference: string) => {
+    Alert.alert(
+      'Supprimer',
+      `Attention: La suppression de ${reference} supprimera définitivement tous les paiements associés. Cette action est irréversible. Confirmer ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await devisApi.delete(devisId);
+              Alert.alert('Succès', 'Élément supprimé avec succès');
+              await fetchData();
+            } catch (e: any) {
+              setLoading(false);
+              Alert.alert('Erreur', e?.response?.data?.message || 'Impossible de supprimer');
+            }
+          }
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -175,7 +203,7 @@ export function AdminFinanceScreen({ navigation }: any) {
         <View style={styles.topStatsRow}>
           <View style={[styles.topStatCard, { borderLeftColor: '#22c55e' }]}>
             <Text style={[styles.topStatValue, { fontSize: 16 }]}>{devisSummary.total.toFixed(3)}</Text>
-            <Text style={styles.topStatLabel}>Montant Total</Text>
+            <Text style={styles.topStatLabel}>Ventes (Session)</Text>
           </View>
           <View style={[styles.topStatCard, { borderLeftColor: '#ef4444' }]}>
             <Text style={[styles.topStatValue, { fontSize: 16, color: '#ef4444' }]}>{Number(stats?.totalExpense || 0).toFixed(3)}</Text>
@@ -214,6 +242,7 @@ export function AdminFinanceScreen({ navigation }: any) {
             { key: 'devis', label: 'Devis', icon: 'document-text' },
             { key: 'recettes', label: 'Recettes', icon: 'trending-up' },
             { key: 'employees', label: 'Par Employé', icon: 'people' },
+            { key: 'machines', label: 'Par Machine', icon: 'construct' },
             { key: 'depenses', label: 'Dépenses', icon: 'trending-down' },
             { key: 'historique', label: 'Historique', icon: 'time' },
           ] as { key: TabKey; label: string; icon: string }[]).map((t) => (
@@ -344,6 +373,15 @@ export function AdminFinanceScreen({ navigation }: any) {
                             <Text style={styles.devisActionText}>Facturer</Text>
                           </TouchableOpacity>
                         )}
+                        {(isSuperAdmin || user?.role === 'ADMIN') && devis.status !== 'INVOICED' && (
+                          <TouchableOpacity
+                            style={[styles.devisActionBtn, { backgroundColor: '#ef4444' }]}
+                            onPress={() => handleDeleteDevis(devis.id, devis.reference)}
+                          >
+                            <Ionicons name="trash" size={16} color="#fff" />
+                            <Text style={styles.devisActionText}>Supprimer</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   )}
@@ -402,9 +440,9 @@ export function AdminFinanceScreen({ navigation }: any) {
         {activeTab === 'employees' && (
           <View style={styles.listContainer}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Employé</Text>
-              <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Nbr</Text>
-              <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Total</Text>
+              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Employé (Prod.)</Text>
+              <Text style={[styles.tableHeaderText, { textAlign: 'center' }]}>Devis</Text>
+              <Text style={[styles.tableHeaderText, { textAlign: 'right' }]}>Total (TND)</Text>
             </View>
             {stats?.revenueByEmployee && stats.revenueByEmployee.length > 0 ? (
               stats.revenueByEmployee.map((item, index) => (
@@ -417,7 +455,35 @@ export function AdminFinanceScreen({ navigation }: any) {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={48} color={colors.text.muted} />
-                <Text style={styles.emptyStateText}>Aucune recette par employé</Text>
+                <Text style={styles.emptyStateText}>Aucune donnée par employé</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ===== PAR MACHINE TAB ===== */}
+        {activeTab === 'machines' && (
+          <View style={styles.listContainer}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { flex: 2 }]}>Machine</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Ops</Text>
+              <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Total (TND)</Text>
+            </View>
+            {stats?.productivityByMachine && stats.productivityByMachine.length > 0 ? (
+              stats.productivityByMachine.map((item, index) => (
+                <View key={item.machine} style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlt]}>
+                  <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="construct-outline" size={14} color={colors.primary[500]} style={{ marginRight: 6 }} />
+                    <Text style={[styles.tableCell, { fontWeight: '500' }]}>{item.machine}</Text>
+                  </View>
+                  <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>{item.count}</Text>
+                  <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#22c55e', fontWeight: '600' }]}>{formatCurrency(item.totalAmount)}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="construct-outline" size={48} color={colors.text.muted} />
+                <Text style={styles.emptyStateText}>Aucune donnée par machine</Text>
               </View>
             )}
           </View>

@@ -15,27 +15,28 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { machinesApi, materialsApi, servicesApi } from '../../services';
+import { machinesApi, materialsApi, servicesApi, materialCategoriesApi } from '../../services';
 import { colors, machineColors } from '../../theme/colors';
-import type { Machine, Material, FixedService } from '../../types';
+import type { MachinePricing, Material, FixedService, MaterialCategory } from '../../types';
 
 type TabType = 'pricing' | 'materials' | 'services';
 
-export function AdminSettingsScreen() {
+export function AdminSettingsScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabType>('pricing');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  const [pricing, setPricing] = useState<Machine[]>([]);
+  const [pricing, setPricing] = useState<MachinePricing[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [services, setServices] = useState<FixedService[]>([]);
+  const [materialCategories, setMaterialCategories] = useState<MaterialCategory[]>([]);
 
-  const [editPriceModal, setEditPriceModal] = useState<Machine | null>(null);
+  const [editPriceModal, setEditPriceModal] = useState<MachinePricing | null>(null);
   const [newPrice, setNewPrice] = useState('');
 
   const [materialModal, setMaterialModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const [materialForm, setMaterialForm] = useState({ name: '', pricePerUnit: '', unit: '', description: '', isActive: true });
+  const [materialForm, setMaterialForm] = useState({ name: '', pricePerUnit: '', unit: '', description: '', categoryId: '', isActive: true });
 
   const [serviceModal, setServiceModal] = useState(false);
   const [editingService, setEditingService] = useState<FixedService | null>(null);
@@ -45,14 +46,16 @@ export function AdminSettingsScreen() {
 
   const fetchData = async () => {
     try {
-      const [pricingData, materialsData, servicesData] = await Promise.all([
+      const [pricingData, materialsData, servicesData, categoriesData] = await Promise.all([
         machinesApi.getPricing(),
         materialsApi.getAll(),
         servicesApi.getAll(),
+        materialCategoriesApi.getAll(),
       ]);
       setPricing(pricingData);
       setMaterials(materialsData);
       setServices(servicesData);
+      setMaterialCategories(categoriesData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -75,7 +78,7 @@ export function AdminSettingsScreen() {
     if (!editPriceModal || !newPrice) return;
     setSaving(true);
     try {
-      await machinesApi.update(editPriceModal.id, { defaultPrice: parseFloat(newPrice) });
+      await machinesApi.updatePricing(editPriceModal.machineType, parseFloat(newPrice));
       setEditPriceModal(null);
       fetchData();
     } catch (error) {
@@ -94,11 +97,12 @@ export function AdminSettingsScreen() {
         pricePerUnit: String(material.pricePerUnit || ''),
         unit: material.unit,
         description: material.description || '',
+        categoryId: material.categoryId || '',
         isActive: material.isActive,
       });
     } else {
       setEditingMaterial(null);
-      setMaterialForm({ name: '', pricePerUnit: '', unit: '', description: '', isActive: true });
+      setMaterialForm({ name: '', pricePerUnit: '', unit: '', description: '', categoryId: '', isActive: true });
     }
     setMaterialModal(true);
   };
@@ -115,6 +119,7 @@ export function AdminSettingsScreen() {
         pricePerUnit: parseFloat(materialForm.pricePerUnit),
         unit: materialForm.unit,
         description: materialForm.description || undefined,
+        categoryId: materialForm.categoryId || undefined,
         isActive: materialForm.isActive,
       };
       if (editingMaterial) {
@@ -256,21 +261,21 @@ export function AdminSettingsScreen() {
         {activeTab === 'pricing' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tarifs par machine</Text>
-            {pricing.filter((m) => m.key !== 'CUSTOM').map((m) => (
+            {pricing.filter((m) => (m.machineType as any) !== 'CUSTOM').map((m) => (
               <TouchableOpacity
-                key={m.id}
+                key={m.machineType}
                 style={styles.pricingCard}
-                onPress={() => { setEditPriceModal(m); setNewPrice(String(m.defaultPrice || '')); }}
+                onPress={() => { setEditPriceModal(m); setNewPrice(String(m.pricePerUnit || '')); }}
               >
-                <View style={[styles.machineIcon, { backgroundColor: (machineColors as any)[m.key] ? (machineColors as any)[m.key] + '20' : colors.primary[500] + '20' }]}>
-                  <Ionicons name="hardware-chip" size={24} color={(machineColors as any)[m.key] || colors.primary[500]} />
+                <View style={[styles.machineIcon, { backgroundColor: (machineColors as any)[m.machineType] ? (machineColors as any)[m.machineType] + '20' : colors.primary[500] + '20' }]}>
+                  <Ionicons name="hardware-chip" size={24} color={(machineColors as any)[m.machineType] || colors.primary[500]} />
                 </View>
                 <View style={styles.pricingInfo}>
-                  <Text style={styles.machineName}>{m.name}</Text>
-                  <Text style={styles.machineDesc}>{m.description || 'Prix par défaut'}</Text>
+                  <Text style={styles.machineName}>{m.machineType.replace('_', ' ')}</Text>
+                  <Text style={styles.machineDesc}>Prix par défaut</Text>
                 </View>
                 <View style={styles.priceContainer}>
-                  <Text style={styles.priceValue}>{Number(m.defaultPrice || 0).toFixed(2)}</Text>
+                  <Text style={styles.priceValue}>{Number(m.pricePerUnit || 0).toFixed(2)}</Text>
                   <Text style={styles.priceCurrency}>TND</Text>
                 </View>
               </TouchableOpacity>
@@ -282,34 +287,72 @@ export function AdminSettingsScreen() {
         {activeTab === 'materials' && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Matériaux</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Matériaux</Text>
+                <TouchableOpacity onPress={() => (navigation as any).navigate('AdminMaterialCategories')}>
+                  <Text style={styles.manageLink}>Gérer les catégories</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity style={styles.addSmallButton} onPress={() => openMaterialModal()}>
                 <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-            {materials.map((m) => (
-              <TouchableOpacity key={m.id} style={styles.itemCard} onPress={() => openMaterialModal(m)}>
-                <View style={styles.itemInfo}>
-                  <View style={styles.itemHeader}>
-                    <Text style={styles.itemName}>{m.name}</Text>
-                    {!m.isActive && (
-                      <View style={styles.inactiveBadge}>
-                        <Text style={styles.inactiveBadgeText}>Inactif</Text>
-                      </View>
-                    )}
+            {(() => {
+              const grouped: Record<string, Material[]> = {};
+              materials.forEach(m => {
+                const catName = m.category?.name || 'Autres';
+                if (!grouped[catName]) grouped[catName] = [];
+                grouped[catName].push(m);
+              });
+
+              const sortedCats = Object.keys(grouped).sort((a, b) => {
+                if (a === 'Autres') return 1;
+                if (b === 'Autres') return -1;
+                return a.localeCompare(b);
+              });
+
+              if (materials.length === 0) {
+                return (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>Aucun matériau</Text>
                   </View>
-                  <Text style={styles.itemDesc}>{Number(m.pricePerUnit || 0).toFixed(2)} TND / {m.unit}</Text>
+                );
+              }
+
+              return sortedCats.map(cat => (
+                <View key={cat} style={styles.categoryGroup}>
+                  <View style={styles.categoryListHeader}>
+                    <Text style={styles.categoryListHeaderText}>{cat}</Text>
+                    <View style={styles.categoryListHeaderLine} />
+                  </View>
+                  {grouped[cat].map((m) => (
+                    <TouchableOpacity key={m.id} style={styles.itemCard} onPress={() => openMaterialModal(m)}>
+                      <View style={styles.itemInfo}>
+                        <View style={styles.itemHeader}>
+                          <Text style={styles.itemName}>{m.name}</Text>
+                          {!m.isActive && (
+                            <View style={styles.inactiveBadge}>
+                              <Text style={styles.inactiveBadgeText}>Inactif</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.itemRow}>
+                          <Text style={styles.itemDesc}>{Number(m.pricePerUnit || 0).toFixed(2)} TND / {m.unit}</Text>
+                          {m.category && (
+                            <View style={[styles.miniCategoryBadge, { backgroundColor: m.category.color + '20' }]}>
+                              <Text style={[styles.miniCategoryText, { color: m.category.color }]}>{m.category.name}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMaterial(m)}>
+                        <Ionicons name="trash-outline" size={18} color={colors.error[500]} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteMaterial(m)}>
-                  <Ionicons name="trash-outline" size={18} color={colors.error[500]} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
-            {materials.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Aucun matériau</Text>
-              </View>
-            )}
+              ));
+            })()}
           </View>
         )}
 
@@ -432,6 +475,34 @@ export function AdminSettingsScreen() {
                   value={materialForm.description}
                   onChangeText={(t) => setMaterialForm({ ...materialForm, description: t })}
                 />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Catégorie</Text>
+                <View style={styles.categoriesGrid}>
+                  <TouchableOpacity
+                    style={[styles.categoryOption, !materialForm.categoryId && styles.categoryOptionSelected]}
+                    onPress={() => setMaterialForm({ ...materialForm, categoryId: '' })}
+                  >
+                    <Text style={[styles.categoryOptionText, !materialForm.categoryId && styles.categoryOptionTextSelected]}>Aucune</Text>
+                  </TouchableOpacity>
+                  {materialCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryOption, 
+                        materialForm.categoryId === cat.id && { backgroundColor: cat.color, borderColor: cat.color }
+                      ]}
+                      onPress={() => setMaterialForm({ ...materialForm, categoryId: cat.id })}
+                    >
+                      <Text style={[
+                        styles.categoryOptionText, 
+                        materialForm.categoryId === cat.id && { color: '#fff' }
+                      ]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
               <TouchableOpacity
                 style={styles.toggleRow}
@@ -556,7 +627,8 @@ const styles = StyleSheet.create({
   },
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary, marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text.primary },
+  manageLink: { fontSize: 13, color: colors.primary[500], fontWeight: '600', marginTop: -12, marginBottom: 12 },
   addSmallButton: {
     width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary[500],
     justifyContent: 'center', alignItems: 'center',
@@ -583,6 +655,9 @@ const styles = StyleSheet.create({
   itemDesc: { fontSize: 13, color: colors.text.muted, marginTop: 4 },
   inactiveBadge: { backgroundColor: colors.error[500] + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   inactiveBadgeText: { fontSize: 10, fontWeight: '600', color: colors.error[500] },
+  itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  miniCategoryBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  miniCategoryText: { fontSize: 10, fontWeight: '600' },
   deleteBtn: { padding: 8 },
   emptyState: { alignItems: 'center', padding: 32 },
   emptyText: { fontSize: 14, color: colors.text.muted },
@@ -620,6 +695,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.elevated, borderRadius: 12, padding: 16, fontSize: 16,
     color: colors.text.primary, borderWidth: 1, borderColor: colors.border.default,
   },
+  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoryOption: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, 
+    backgroundColor: colors.background.elevated, borderWidth: 1, borderColor: colors.border.default,
+  },
+  categoryOptionSelected: { backgroundColor: colors.primary[500], borderColor: colors.primary[500] },
+  categoryOptionText: { fontSize: 13, color: colors.text.secondary },
+  categoryOptionTextSelected: { color: '#fff', fontWeight: '600' },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   toggleLabel: { fontSize: 16, color: colors.text.primary },
   toggle: {
@@ -634,4 +717,8 @@ const styles = StyleSheet.create({
   saveButton: { flex: 2, padding: 16, borderRadius: 12, backgroundColor: colors.primary[500], alignItems: 'center' },
   saveButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   buttonDisabled: { opacity: 0.7 },
+  categoryGroup: { marginBottom: 16 },
+  categoryListHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10, marginTop: 8 },
+  categoryListHeaderText: { fontSize: 13, fontWeight: '700', color: colors.text.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  categoryListHeaderLine: { flex: 1, height: 1, backgroundColor: colors.border.subtle },
 });
